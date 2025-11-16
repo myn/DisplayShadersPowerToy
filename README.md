@@ -11,6 +11,10 @@ This application addresses [PowerToys Issue #25595](https://github.com/microsoft
 - Windows ClearType is optimized for standard RGB stripe LCD displays
 - Using standard ClearType on OLED displays causes chromatic aberration and color fringing on text edges
 
+## Screenshot
+
+![Display Shaders PowerToy Interface](Screenshot%202025-11-15%20221459.png)
+
 ## Features
 
 - **Subpixel Layout Support**:
