@@ -2,7 +2,7 @@
 
 **Crystal-clear text rendering for modern OLED displays**
 
-![OLED Text Optimizer](docs/images/screenshot-main.png)
+![OLED Text Optimizer](Screenshot%202025-11-17%20135100.png)
 
 ## What is This?
 
@@ -48,7 +48,7 @@ This application provides **two optimization methods** that work together:
 
 The interface shows real-time status and easy configuration:
 
-![Screenshot showing the modern UI with status card, display configuration, and active process list](screenshot.png)
+![OLED Text Optimizer Interface](Screenshot%202025-11-17%20135100.png)
 
 **Key Elements:**
 - **Green status indicator** - Shows active optimization
