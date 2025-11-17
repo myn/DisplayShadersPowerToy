@@ -1,83 +1,56 @@
-﻿<Window x:Class="DisplayShadersPowerToy.MainWindow"
+<Window x:Class="DisplayShadersPowerToy.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:DisplayShadersPowerToy"
         mc:Ignorable="d"
-        Title="Display Shaders PowerToy" 
-        Height="700" 
-        Width="1100"
+        Title="OLED Text Optimizer" 
+        Height="650" 
+        Width="900"
         ResizeMode="CanResize"
-        MinWidth="1100"
-        MinHeight="700"
+        MinWidth="900"
+        MinHeight="650"
         WindowStartupLocation="CenterScreen"
         Closing="Window_Closing"
-        StateChanged="Window_StateChanged">
+        StateChanged="Window_StateChanged"
+        Background="#F8F9FA">
 
     <Window.Resources>
-        <!-- Light Theme Colors -->
-        <SolidColorBrush x:Key="LightBackground" Color="#F5F5F5"/>
-        <SolidColorBrush x:Key="LightCardBackground" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="LightForeground" Color="#000000"/>
-        <SolidColorBrush x:Key="LightSecondaryForeground" Color="#666666"/>
-        <SolidColorBrush x:Key="LightBorder" Color="#E0E0E0"/>
-        <SolidColorBrush x:Key="LightAccent" Color="#0078D4"/>
-
-        <!-- Dark Theme Colors -->
-        <SolidColorBrush x:Key="DarkBackground" Color="#1E1E1E"/>
-        <SolidColorBrush x:Key="DarkCardBackground" Color="#2D2D2D"/>
-        <SolidColorBrush x:Key="DarkForeground" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="DarkSecondaryForeground" Color="#B0B0B0"/>
-        <SolidColorBrush x:Key="DarkBorder" Color="#3F3F46"/>
-        <SolidColorBrush x:Key="DarkAccent" Color="#4A9EFF"/>
-
-        <!-- Default Theme Resources (Light) -->
-        <SolidColorBrush x:Key="AppBackground" Color="#F5F5F5"/>
-        <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="CardForeground" Color="#000000"/>
-        <SolidColorBrush x:Key="SecondaryForeground" Color="#666666"/>
-        <SolidColorBrush x:Key="CardBorder" Color="#E0E0E0"/>
-        <SolidColorBrush x:Key="PreviewBackground" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="PreviewForeground" Color="#000000"/>
-        <SolidColorBrush x:Key="PreviewSecondaryForeground" Color="#666666"/>
-        <SolidColorBrush x:Key="PreviewTipBackground" Color="#F9F9F9"/>
-        <SolidColorBrush x:Key="PreviewTipBorder" Color="#E0E0E0"/>
-        <SolidColorBrush x:Key="ButtonBackground" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="ButtonForeground" Color="#000000"/>
-        <SolidColorBrush x:Key="ButtonBorder" Color="#E0E0E0"/>
+        <!-- Modern Color Palette -->
+        <SolidColorBrush x:Key="Primary" Color="#0066FF"/>
+        <SolidColorBrush x:Key="PrimaryHover" Color="#0052CC"/>
+        <SolidColorBrush x:Key="Success" Color="#00C853"/>
+        <SolidColorBrush x:Key="Warning" Color="#FF9800"/>
+        <SolidColorBrush x:Key="Danger" Color="#F44336"/>
+        <SolidColorBrush x:Key="Background" Color="#F8F9FA"/>
+        <SolidColorBrush x:Key="Surface" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="SurfaceHover" Color="#F5F5F5"/>
+        <SolidColorBrush x:Key="Border" Color="#E0E0E0"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#212121"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#757575"/>
+        <SolidColorBrush x:Key="Accent" Color="#7C4DFF"/>
 
         <!-- Modern Button Style -->
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Padding" Value="16,10"/>
-            <Setter Property="Margin" Value="5,0,0,0"/>
-            <Setter Property="MinWidth" Value="100"/>
-            <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
-            <Setter Property="Foreground" Value="{DynamicResource ButtonForeground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontSize" Value="13"/>
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource Primary}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Height" Value="40"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"
+                                CornerRadius="6"
                                 Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Opacity" Value="0.9"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Opacity" Value="0.7"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.5"/>
+                                <Setter Property="Background" Value="{StaticResource PrimaryHover}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -85,658 +58,401 @@
             </Setter>
         </Style>
 
-        <!-- Primary Button Style -->
-        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="#0078D4"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#0078D4"/>
-        </Style>
-
-        <!-- Secondary Button Style -->
-        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource CardForeground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}"/>
-        </Style>
-
-        <!-- Danger Button Style -->
-        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ModernButton}">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#D13438"/>
-            <Setter Property="BorderBrush" Value="#D13438"/>
-        </Style>
-
-        <!-- GroupBox Style -->
-        <Style TargetType="GroupBox">
-            <Setter Property="Margin" Value="0,0,0,14"/>
-            <Setter Property="Padding" Value="14"/>
-            <Setter Property="Background" Value="{DynamicResource CardBackground}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}"/>
-            <Setter Property="BorderThickness" Value="1"/>
+        <!-- Modern Toggle Switch Style -->
+        <Style x:Key="ModernToggle" TargetType="ToggleButton">
+            <Setter Property="Width" Value="50"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="GroupBox">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <StackPanel>
-                                <TextBlock Text="{TemplateBinding Header}" 
-                                          FontWeight="SemiBold" 
-                                          FontSize="14"
-                                          Foreground="{DynamicResource CardForeground}"
-                                          Margin="0,0,0,10"/>
-                                <ContentPresenter/>
-                            </StackPanel>
-                        </Border>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid>
+                            <Border x:Name="BackBorder"
+                                    Background="#CCCCCC"
+                                    CornerRadius="14"
+                                    Width="50"
+                                    Height="28"/>
+                            <Border x:Name="Thumb"
+                                    Background="White"
+                                    CornerRadius="12"
+                                    Width="22"
+                                    Height="22"
+                                    HorizontalAlignment="Left"
+                                    Margin="3,0,0,0">
+                                <Border.Effect>
+                                    <DropShadowEffect ShadowDepth="1" BlurRadius="3" Opacity="0.3"/>
+                                </Border.Effect>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="BackBorder" Property="Background" Value="{StaticResource Success}"/>
+                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                                <Setter TargetName="Thumb" Property="Margin" Value="0,0,3,0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
 
-        <Style TargetType="RadioButton">
-            <Setter Property="Margin" Value="0,4,0,4"/>
-            <Setter Property="Foreground" Value="{DynamicResource CardForeground}"/>
-        </Style>
-        <Style TargetType="CheckBox">
-            <Setter Property="Margin" Value="0,4,0,4"/>
-            <Setter Property="Foreground" Value="{DynamicResource CardForeground}"/>
+        <!-- Card Style -->
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource Surface}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
         </Style>
     </Window.Resources>
 
-    <Grid x:Name="MainGrid" Background="{DynamicResource AppBackground}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
-        <!-- Top Bar with Theme Toggle -->
-        <Border Grid.Row="0" 
-                Background="{DynamicResource CardBackground}" 
-                BorderBrush="{DynamicResource CardBorder}"
-                BorderThickness="0,0,0,1"
-                Padding="20,14">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="Display Shaders PowerToy" 
-                               FontSize="22" 
-                               FontWeight="Bold"
-                               Foreground="{DynamicResource CardForeground}"/>
-                    <TextBlock Text="Optimize text rendering for OLED displays" 
-                               FontSize="11"
-                               Foreground="{DynamicResource SecondaryForeground}"
-                               Margin="0,3,0,0"/>
-                    
-                    <!-- Status Indicators -->
-                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <!-- Shader Injection Status -->
-                        <Border x:Name="statusShaderBadge"
-                                Background="#E8F4F8" 
-                                BorderBrush="#4A9EFF" 
-                                BorderThickness="1"
-                                CornerRadius="4"
-                                Padding="8,4"
-                                Margin="0,0,8,0"
-                                Visibility="Collapsed">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="🎨" 
-                                          Margin="0,0,6,0"
-                                          VerticalAlignment="Center"/>
-                                <TextBlock FontSize="10" Foreground="#005A9E" VerticalAlignment="Center">
-                                    <Run Text="Shader Hook: " FontWeight="SemiBold"/>
-                                    <Run x:Name="runShaderStatus" Text="Ready"/>
-                                </TextBlock>
-                            </StackPanel>
-                        </Border>
-                        
-                        <!-- ClearType Status -->
-                        <Border x:Name="statusClearTypeBadge"
-                                Background="#E8F4F8" 
-                                BorderBrush="#4A9EFF" 
-                                BorderThickness="1"
-                                CornerRadius="4"
-                                Padding="8,4">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="📝" 
-                                          Margin="0,0,6,0"
-                                          VerticalAlignment="Center"/>
-                                <TextBlock FontSize="10" Foreground="#005A9E" VerticalAlignment="Center">
-                                    <Run Text="ClearType: " FontWeight="SemiBold"/>
-                                    <Run x:Name="runClearTypeStatus" Text="Active"/>
-                                </TextBlock>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </StackPanel>
-
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Preview Mode:" 
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource CardForeground}"
-                               FontSize="12"
-                               Margin="0,0,10,0"/>
-                    <ToggleButton x:Name="toggleDarkMode"
-                                  Width="120"
-                                  Height="32"
-                                  Click="ToggleDarkMode_Click">
-                        <ToggleButton.Style>
-                            <Style TargetType="ToggleButton">
-                                <Setter Property="Background" Value="#E0E0E0"/>
-                                <Setter Property="BorderBrush" Value="#E0E0E0"/>
-                                <Setter Property="BorderThickness" Value="0"/>
-                                <Setter Property="Cursor" Value="Hand"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ToggleButton">
-                                            <Border Background="{TemplateBinding Background}"
-                                                    CornerRadius="16"
-                                                    Padding="4">
-                                                <Grid>
-                                                    <TextBlock x:Name="LightLabel" Text="☀️ Light" 
-                                                              HorizontalAlignment="Left"
-                                                              VerticalAlignment="Center"
-                                                              Margin="8,0,0,0"
-                                                              FontSize="12"
-                                                              FontWeight="SemiBold"
-                                                              Foreground="#666"/>
-                                                    <TextBlock x:Name="DarkLabel" Text="🌙 Dark" 
-                                                              HorizontalAlignment="Right"
-                                                              VerticalAlignment="Center"
-                                                              Margin="0,0,8,0"
-                                                              FontSize="12"
-                                                              FontWeight="SemiBold"
-                                                              Foreground="#666"
-                                                              Opacity="0.5"/>
-                                                    <Border x:Name="ThumbBorder"
-                                                            Width="54"
-                                                            Height="24"
-                                                            Background="White"
-                                                            CornerRadius="12"
-                                                            HorizontalAlignment="Left"
-                                                            Margin="0">
-                                                        <Border.Effect>
-                                                            <DropShadowEffect ShadowDepth="0" BlurRadius="4" Opacity="0.3"/>
-                                                        </Border.Effect>
-                                                    </Border>
-                                                </Grid>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsChecked" Value="True">
-                                                    <Setter TargetName="ThumbBorder" Property="HorizontalAlignment" Value="Right"/>
-                                                    <Setter TargetName="ThumbBorder" Property="Background" Value="#2D2D2D"/>
-                                                    <Setter TargetName="LightLabel" Property="Opacity" Value="0.5"/>
-                                                    <Setter TargetName="DarkLabel" Property="Opacity" Value="1"/>
-                                                    <Setter TargetName="DarkLabel" Property="Foreground" Value="White"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ToggleButton.Style>
-                    </ToggleButton>
-                </StackPanel>
-            </Grid>
-        </Border>
-
+    <Grid>
         <!-- Main Content -->
-        <Grid Grid.Row="1" Margin="18">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="520"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Left Panel: Settings -->
-            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,10,0">
-                <StackPanel>
-                    
-                    <!-- SHADER INJECTION SETTINGS (Hooking Mode) -->
-                    <Border Background="{DynamicResource CardBackground}"
-                            BorderBrush="#4CAF50"
-                            BorderThickness="2"
-                            CornerRadius="8"
-                            Padding="16"
-                            Margin="0,0,0,16">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="🎨 Shader Injection (Advanced)" 
-                                               FontSize="16" 
-                                               FontWeight="Bold"
-                                               Foreground="{DynamicResource CardForeground}"/>
-                                    <TextBlock Text="Real DirectWrite shader hooking - crystal clear text on all apps" 
-                                               FontSize="10"
-                                               Foreground="{DynamicResource SecondaryForeground}"
-                                               Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <ToggleButton x:Name="toggleShaderInjection"
-                                             Grid.Column="1"
-                                             Width="50"
-                                             Height="26"
-                                             VerticalAlignment="Center"
-                                             Checked="ShaderInjection_Changed"
-                                             Unchecked="ShaderInjection_Changed">
-                                    <ToggleButton.Style>
-                                        <Style TargetType="ToggleButton">
-                                            <Setter Property="Background" Value="#CCCCCC"/>
-                                            <Setter Property="Cursor" Value="Hand"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="ToggleButton">
-                                                        <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="13">
-                                                            <Border x:Name="Thumb" Width="20" Height="20" Background="White" CornerRadius="10" 
-                                                                   HorizontalAlignment="Left" Margin="3,3,3,3">
-                                                                <Border.Effect>
-                                                                    <DropShadowEffect ShadowDepth="0" BlurRadius="3" Opacity="0.3"/>
-                                                                </Border.Effect>
-                                                            </Border>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsChecked" Value="True">
-                                                                <Setter TargetName="Border" Property="Background" Value="#4CAF50"/>
-                                                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </ToggleButton.Style>
-                                </ToggleButton>
-                            </Grid>
-
-                            <StackPanel x:Name="shaderInjectionPanel">
-                                <!-- Subpixel Layout for Shaders -->
-                                <TextBlock Text="Subpixel Layout" 
-                                          FontWeight="SemiBold"
-                                          FontSize="12"
-                                          Foreground="{DynamicResource CardForeground}"
-                                          Margin="0,0,0,6"/>
-                                <RadioButton x:Name="rbShaderRgbStripe" 
-                                             Content="RGB Stripe (Standard LCD)" 
-                                             GroupName="ShaderLayout"
-                                             Checked="ShaderLayout_Changed"/>
-                                <RadioButton x:Name="rbShaderWrgbStripe" 
-                                             Content="WRGB Stripe (WOLED - LG OLED)" 
-                                             GroupName="ShaderLayout"
-                                             Checked="ShaderLayout_Changed"/>
-                                <RadioButton x:Name="rbShaderRgbTriangular" 
-                                             Content="RGB Triangular (QD-OLED - Samsung)" 
-                                             GroupName="ShaderLayout"
-                                             Checked="ShaderLayout_Changed"/>
-                                <RadioButton x:Name="rbShaderPentile" 
-                                             Content="PenTile (AMOLED)" 
-                                             GroupName="ShaderLayout"
-                                             Checked="ShaderLayout_Changed"/>
-
-                                <!-- Shader Intensity -->
-                                <TextBlock Text="Shader Intensity" 
-                                          Margin="0,12,0,6"
-                                          FontWeight="SemiBold"
-                                          FontSize="12"
-                                          Foreground="{DynamicResource CardForeground}"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="60"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Slider x:Name="sliderShaderIntensity" 
-                                            Grid.Column="0"
-                                            Minimum="0" 
-                                            Maximum="1" 
-                                            Value="1.0" 
-                                            TickFrequency="0.1" 
-                                            IsSnapToTickEnabled="True"
-                                            ValueChanged="ShaderIntensity_Changed"
-                                            VerticalAlignment="Center"/>
-                                    <Border Grid.Column="1"
-                                           Background="{DynamicResource CardBorder}"
-                                           CornerRadius="4"
-                                           Padding="8,4"
-                                           Margin="10,0,0,0">
-                                        <TextBlock Text="{Binding ElementName=sliderShaderIntensity, Path=Value, StringFormat={}{0:P0}}" 
-                                                   TextAlignment="Center"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource CardForeground}"/>
-                                    </Border>
-                                </Grid>
-
-                                <!-- Status Info -->
-                                <Border BorderBrush="#4CAF50"
-                                        Background="#E8F5E9"
-                                        BorderThickness="1" 
-                                        Padding="10" 
-                                        CornerRadius="4"
-                                        Margin="0,12,0,0">
-                                    <StackPanel>
-                                        <TextBlock FontSize="10" Foreground="#2E7D32">
-                                            <Run Text="ℹ️ " FontWeight="Bold"/>
-                                            <Run Text="Status: " FontWeight="SemiBold"/>
-                                            <Run x:Name="runShaderModeStatus" Text="Ready to inject"/>
-                                        </TextBlock>
-                                        <TextBlock x:Name="txtShaderProcessList"
-                                                   TextWrapping="Wrap" 
-                                                   FontSize="9"
-                                                   Foreground="#2E7D32"
-                                                   Margin="14,4,0,0"
-                                                   LineHeight="14"
-                                                   Text="Click Apply to inject shaders into all running applications"/>
-                                    </StackPanel>
-                                </Border>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- CLEARTYPE SETTINGS (Registry Mode) -->
-                    <Border Background="{DynamicResource CardBackground}"
-                            BorderBrush="#2196F3"
-                            BorderThickness="2"
-                            CornerRadius="8"
-                            Padding="16"
-                            Margin="0,0,0,16">
-                        <StackPanel>
-                            <Grid Margin="0,0,0,12">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="📝 ClearType Optimization (Fallback)" 
-                                               FontSize="16" 
-                                               FontWeight="Bold"
-                                               Foreground="{DynamicResource CardForeground}"/>
-                                    <TextBlock Text="Windows registry-based ClearType adjustments (always works)" 
-                                               FontSize="10"
-                                               Foreground="{DynamicResource SecondaryForeground}"
-                                               Margin="0,2,0,0"/>
-                                </StackPanel>
-                                <ToggleButton x:Name="toggleClearType"
-                                             Grid.Column="1"
-                                             Width="50"
-                                             Height="26"
-                                             VerticalAlignment="Center"
-                                             Checked="ClearType_Changed"
-                                             Unchecked="ClearType_Changed">
-                                    <ToggleButton.Style>
-                                        <Style TargetType="ToggleButton">
-                                            <Setter Property="Background" Value="#CCCCCC"/>
-                                            <Setter Property="Cursor" Value="Hand"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="ToggleButton">
-                                                        <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="13">
-                                                            <Border x:Name="Thumb" Width="20" Height="20" Background="White" CornerRadius="10" 
-                                                                   HorizontalAlignment="Left" Margin="3,3,3,3">
-                                                                <Border.Effect>
-                                                                    <DropShadowEffect ShadowDepth="0" BlurRadius="3" Opacity="0.3"/>
-                                                                </Border.Effect>
-                                                            </Border>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsChecked" Value="True">
-                                                                <Setter TargetName="Border" Property="Background" Value="#2196F3"/>
-                                                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </ToggleButton.Style>
-                                </ToggleButton>
-                            </Grid>
-
-                            <StackPanel x:Name="clearTypePanel">
-                                <!-- Subpixel Layout for ClearType -->
-                                <TextBlock Text="Subpixel Layout" 
-                                          FontWeight="SemiBold"
-                                          FontSize="12"
-                                          Foreground="{DynamicResource CardForeground}"
-                                          Margin="0,0,0,6"/>
-                                <RadioButton x:Name="rbClearTypeRgbStripe" 
-                                             Content="RGB Stripe (Standard LCD)" 
-                                             GroupName="ClearTypeLayout"
-                                             Checked="ClearTypeLayout_Changed"/>
-                                <RadioButton x:Name="rbClearTypeWrgbStripe" 
-                                             Content="WRGB Stripe (WOLED - LG OLED)" 
-                                             GroupName="ClearTypeLayout"
-                                             Checked="ClearTypeLayout_Changed"/>
-                                <RadioButton x:Name="rbClearTypeRgbTriangular" 
-                                             Content="RGB Triangular (QD-OLED - Samsung)" 
-                                             GroupName="ClearTypeLayout"
-                                             Checked="ClearTypeLayout_Changed"/>
-                                <RadioButton x:Name="rbClearTypePentile" 
-                                             Content="PenTile (AMOLED)" 
-                                             GroupName="ClearTypeLayout"
-                                             Checked="ClearTypeLayout_Changed"/>
-                                <RadioButton x:Name="rbClearTypeNone" 
-                                             Content="None (Disable ClearType)" 
-                                             GroupName="ClearTypeLayout"
-                                             Checked="ClearTypeLayout_Changed"/>
-
-                                <!-- ClearType Contrast -->
-                                <TextBlock Text="Contrast Adjustment" 
-                                          Margin="0,12,0,6"
-                                          FontWeight="SemiBold"
-                                          FontSize="12"
-                                          Foreground="{DynamicResource CardForeground}"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="60"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Slider x:Name="sliderClearTypeIntensity" 
-                                            Grid.Column="0"
-                                            Minimum="0" 
-                                            Maximum="1" 
-                                            Value="1.0" 
-                                            TickFrequency="0.1" 
-                                            IsSnapToTickEnabled="True"
-                                            ValueChanged="ClearTypeIntensity_Changed"
-                                            VerticalAlignment="Center"/>
-                                    <Border Grid.Column="1"
-                                           Background="{DynamicResource CardBorder}"
-                                           CornerRadius="4"
-                                           Padding="8,4"
-                                           Margin="10,0,0,0">
-                                        <TextBlock Text="{Binding ElementName=sliderClearTypeIntensity, Path=Value, StringFormat={}{0:P0}}" 
-                                                   TextAlignment="Center"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource CardForeground}"/>
-                                    </Border>
-                                </Grid>
-
-                                <!-- Info -->
-                                <Border BorderBrush="#2196F3"
-                                        Background="#E3F2FD"
-                                        BorderThickness="1" 
-                                        Padding="10" 
-                                        CornerRadius="4"
-                                        Margin="0,12,0,0">
-                                    <TextBlock TextWrapping="Wrap" 
-                                               FontSize="9"
-                                               Foreground="#1565C0"
-                                               LineHeight="14">
-                                        Registry-based ClearType optimization. Works system-wide but may require app restart. Limited effectiveness on OLED displays.
-                                    </TextBlock>
-                                </Border>
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Application Settings -->
-                    <GroupBox Header="Application Settings">
-                        <StackPanel>
-                            <CheckBox x:Name="cbStartWithWindows" 
-                                      Content="Start with Windows" 
-                                      Checked="StartWithWindows_Changed"
-                                      Unchecked="StartWithWindows_Changed"/>
-                            <CheckBox x:Name="cbMinimizeToTray" 
-                                      Content="Minimize to system tray" 
-                                      Checked="MinimizeToTray_Changed"
-                                      Unchecked="MinimizeToTray_Changed"/>
-                            
-                            <!-- Diagnostic Log Button -->
-                            <Border BorderBrush="{DynamicResource CardBorder}"
-                                    BorderThickness="1" 
-                                    Padding="10" 
-                                    CornerRadius="4"
-                                    Margin="0,12,0,0">
-                                <StackPanel>
-                                    <TextBlock Text="📋 Diagnostic Logging" 
-                                               FontWeight="SemiBold"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource CardForeground}"
-                                               Margin="0,0,0,6"/>
-                                    <TextBlock TextWrapping="Wrap" 
-                                               FontSize="9"
-                                               Foreground="{DynamicResource SecondaryForeground}"
-                                               Margin="0,0,0,8"
-                                               LineHeight="13">
-                                        Detailed logs are saved to help debug issues. Click below to view or share the log file.
-                                    </TextBlock>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button x:Name="btnViewLog" 
-                                                Content="📄 View Log File" 
-                                                Click="ViewLog_Click"
-                                                Style="{StaticResource SecondaryButton}"
-                                                Margin="0"
-                                                Height="28"
-                                                Padding="8,4"/>
-                                        <Button x:Name="btnOpenLogFolder" 
-                                                Content="📁 Open Log Folder" 
-                                                Click="OpenLogFolder_Click"
-                                                Style="{StaticResource SecondaryButton}"
-                                                Height="28"
-                                                Padding="8,4"/>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </GroupBox>
-
-                    <!-- Action Buttons -->
-                    <Grid Margin="0,8,0,0">
-                        <Button x:Name="btnReset" 
-                                Content="🔄 Reset All to Defaults" 
-                                Click="Reset_Click"
-                                Style="{StaticResource DangerButton}"
-                                HorizontalAlignment="Left"
-                                Margin="0"
-                                ToolTip="Restore Windows defaults for both modes"/>
-                    </Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="850" Margin="24">
+                
+                <!-- Header -->
+                <StackPanel Margin="0,0,0,24">
+                    <TextBlock Text="OLED Text Optimizer" 
+                               FontSize="32" 
+                               FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimary}"/>
+                    <TextBlock Text="Crystal-clear text rendering for modern OLED displays" 
+                               FontSize="14"
+                               Foreground="{StaticResource TextSecondary}"
+                               Margin="0,4,0,0"/>
                 </StackPanel>
-            </ScrollViewer>
 
-            <!-- Right Panel: Preview -->
-            <Border Grid.Column="1" 
-                    x:Name="PreviewPanel"
-                    Background="{DynamicResource PreviewBackground}"
-                    BorderBrush="{DynamicResource CardBorder}" 
-                    BorderThickness="1" 
-                    Margin="10,0,0,0"
-                    CornerRadius="6">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel Margin="20">
-                        <TextBlock Text="Preview" 
+                <!-- Quick Status Card -->
+                <Border Style="{StaticResource Card}" BorderBrush="{StaticResource Success}" BorderThickness="2">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Ellipse Grid.Column="0" 
+                                 Width="32" 
+                                 Height="32" 
+                                 Fill="#4CAF50"
+                                 VerticalAlignment="Center" 
+                                 Margin="0,0,16,0"/>
+
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock x:Name="txtQuickStatus" 
+                                       Text="Optimizing 5 applications" 
+                                       FontSize="16" 
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimary}"/>
+                            <TextBlock x:Name="txtQuickStatusDetail" 
+                                       Text="Real-time shader injection active" 
+                                       FontSize="12"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <ToggleButton x:Name="toggleQuickEnable"
+                                         Style="{StaticResource ModernToggle}"
+                                         IsChecked="True"
+                                         Checked="QuickEnable_Changed"
+                                         Unchecked="QuickEnable_Changed"/>
+                            <TextBlock Text="ENABLED" 
+                                       FontSize="10" 
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource Success}"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Display Configuration -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Display Configuration" 
                                    FontSize="18" 
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource PreviewForeground}"
-                                   Margin="0,0,0,6"/>
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimary}"
+                                   Margin="0,0,0,16"/>
 
-                        <TextBlock TextWrapping="Wrap" 
-                                   Margin="0,0,0,18"
-                                   FontSize="11"
-                                   Foreground="{DynamicResource PreviewSecondaryForeground}">
-                            <Run Text="Active modes: "/>
-                            <Run x:Name="runPreviewSettings" FontWeight="SemiBold"/>
-                        </TextBlock>
+                        <TextBlock Text="Select your display type:" 
+                                   FontSize="13"
+                                   Foreground="{StaticResource TextSecondary}"
+                                   Margin="0,0,0,12"/>
 
-                        <TextBlock Text="Small Text (9pt)" 
-                                   FontSize="10" 
-                                   FontWeight="SemiBold" 
-                                   Margin="0,0,0,6"
-                                   Foreground="{DynamicResource PreviewSecondaryForeground}"/>
-                        <TextBlock x:Name="txtSmallPreview" 
-                                   FontSize="9" 
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource PreviewForeground}"
-                                   Margin="0,0,0,16">
-                            The quick brown fox jumps over the lazy dog. ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789
-                        </TextBlock>
+                        <!-- Display Type Selection -->
+                        <StackPanel>
+                            <RadioButton x:Name="rbDisplayRgbLcd"
+                                        GroupName="DisplayType"
+                                        Checked="DisplayType_Changed"
+                                        Margin="0,0,0,10">
+                                <RadioButton.Content>
+                                    <StackPanel>
+                                        <TextBlock Text="Standard LCD / LED Monitor" FontWeight="SemiBold" FontSize="13"/>
+                                        <TextBlock Text="Traditional RGB stripe layout" 
+                                                  FontSize="11" 
+                                                  Foreground="{StaticResource TextSecondary}"
+                                                  Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </RadioButton.Content>
+                            </RadioButton>
 
-                        <TextBlock Text="Regular Text (11pt)" 
-                                   FontSize="10" 
-                                   FontWeight="SemiBold" 
-                                   Margin="0,0,0,6"
-                                   Foreground="{DynamicResource PreviewSecondaryForeground}"/>
-                        <TextBlock x:Name="txtRegularPreview" 
-                                   FontSize="11" 
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource PreviewForeground}"
-                                   Margin="0,0,0,16">
-                            The quick brown fox jumps over the lazy dog. ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789
-                        </TextBlock>
+                            <RadioButton x:Name="rbDisplayWoled"
+                                        GroupName="DisplayType"
+                                        Checked="DisplayType_Changed"
+                                        Margin="0,0,0,10">
+                                <RadioButton.Content>
+                                    <StackPanel>
+                                        <TextBlock Text="LG WOLED (WRGB)" FontWeight="SemiBold" FontSize="13"/>
+                                        <TextBlock Text="LG C/G/B series OLED TVs and monitors" 
+                                                  FontSize="11" 
+                                                  Foreground="{StaticResource TextSecondary}"
+                                                  Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </RadioButton.Content>
+                            </RadioButton>
 
-                        <TextBlock Text="Large Text (14pt)" 
-                                   FontSize="10" 
-                                   FontWeight="SemiBold" 
-                                   Margin="0,0,0,6"
-                                   Foreground="{DynamicResource PreviewSecondaryForeground}"/>
-                        <TextBlock x:Name="txtLargePreview" 
-                                   FontSize="14" 
-                                   TextWrapping="Wrap"
-                                   Foreground="{DynamicResource PreviewForeground}"
-                                   Margin="0,0,0,16">
-                            The quick brown fox jumps over the lazy dog. ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789
-                        </TextBlock>
+                            <RadioButton x:Name="rbDisplayQdOled"
+                                        GroupName="DisplayType"
+                                        Checked="DisplayType_Changed"
+                                        Margin="0,0,0,10">
+                                <RadioButton.Content>
+                                    <StackPanel>
+                                        <TextBlock Text="QD-OLED (RGB Triangular)" FontWeight="SemiBold" FontSize="13"/>
+                                        <TextBlock Text="Samsung / Alienware QD-OLED monitors" 
+                                                  FontSize="11" 
+                                                  Foreground="{StaticResource TextSecondary}"
+                                                  Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </RadioButton.Content>
+                            </RadioButton>
 
-                        <TextBlock Text="Sample Paragraph" 
-                                   FontSize="10" 
-                                   FontWeight="SemiBold" 
-                                   Margin="0,0,0,6"
-                                   Foreground="{DynamicResource PreviewSecondaryForeground}"/>
-                        <TextBlock x:Name="txtParagraphPreview" 
-                                   FontSize="11" 
-                                   TextWrapping="Wrap"
-                                   LineHeight="18"
-                                   Foreground="{DynamicResource PreviewForeground}"
-                                   Margin="0,0,0,16">
-                            ClearType is a software-based technology developed by Microsoft that improves the appearance of text on LCD screens. It works by taking advantage of the physical arrangement of the red, green, and blue color stripes in an LCD screen. Different OLED displays use different subpixel arrangements, which is why this tool exists to optimize text rendering for your specific display type.
-                        </TextBlock>
+                            <RadioButton x:Name="rbDisplayPentile"
+                                        GroupName="DisplayType"
+                                        Checked="DisplayType_Changed">
+                                <RadioButton.Content>
+                                    <StackPanel>
+                                        <TextBlock Text="PenTile AMOLED" FontWeight="SemiBold" FontSize="13"/>
+                                        <TextBlock Text="Most smartphone displays" 
+                                                  FontSize="11" 
+                                                  Foreground="{StaticResource TextSecondary}"
+                                                  Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </RadioButton.Content>
+                            </RadioButton>
+                        </StackPanel>
 
-                        <Border BorderBrush="{DynamicResource PreviewTipBorder}"
-                                Background="{DynamicResource PreviewTipBackground}"
-                                BorderThickness="1" 
-                                Padding="12" 
-                                CornerRadius="6">
+                        <!-- Intensity Slider -->
+                        <Border Background="{StaticResource SurfaceHover}" 
+                                CornerRadius="6" 
+                                Padding="16" 
+                                Margin="0,16,0,0">
                             <StackPanel>
-                                <TextBlock Text="💡 Tip" 
-                                           FontWeight="Bold"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource PreviewForeground}"
-                                           Margin="0,0,0,6"/>
-                                <TextBlock TextWrapping="Wrap" 
-                                           FontSize="11"
-                                           LineHeight="16"
-                                           Foreground="{DynamicResource PreviewSecondaryForeground}">
-                                    Click "Preview" to temporarily apply settings system-wide for 15 seconds. See the effect in other apps. Settings revert automatically, or click "Apply" to make them permanent.
-                                </TextBlock>
+                                <Grid Margin="0,0,0,8">
+                                    <TextBlock Text="Optimization Strength" 
+                                              FontSize="13" 
+                                              FontWeight="SemiBold"
+                                              HorizontalAlignment="Left"/>
+                                    <TextBlock x:Name="txtIntensityValue" 
+                                              Text="100%" 
+                                              FontSize="13" 
+                                              FontWeight="Bold"
+                                              Foreground="{StaticResource Primary}"
+                                              HorizontalAlignment="Right"/>
+                                </Grid>
+                                <Slider x:Name="sliderIntensity"
+                                       Minimum="0"
+                                       Maximum="1"
+                                       Value="1.0"
+                                       TickFrequency="0.1"
+                                       IsSnapToTickEnabled="True"
+                                       ValueChanged="Intensity_Changed"/>
+                                <TextBlock Text="Lower values reduce color fringing but may decrease clarity" 
+                                          FontSize="10"
+                                          Foreground="{StaticResource TextSecondary}"
+                                          Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
-                </ScrollViewer>
-            </Border>
-        </Grid>
+                </Border>
+
+                <!-- Advanced Options -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Advanced Options" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimary}"
+                                   Margin="0,0,0,16"/>
+
+                        <!-- Injection Mode Toggle -->
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Real-time Process Injection" 
+                                          FontSize="13" 
+                                          FontWeight="SemiBold"/>
+                                <TextBlock Text="Automatically optimize new applications as they launch" 
+                                          FontSize="11"
+                                          Foreground="{StaticResource TextSecondary}"
+                                          Margin="0,2,0,0"
+                                          TextWrapping="Wrap"/>
+                            </StackPanel>
+                            
+                            <ToggleButton x:Name="toggleAutoInject"
+                                         Grid.Column="1"
+                                         Style="{StaticResource ModernToggle}"
+                                         IsChecked="True"
+                                         Checked="AutoInject_Changed"
+                                         Unchecked="AutoInject_Changed"
+                                         VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <Separator Margin="0,12,0,12"/>
+
+                        <!-- Application Settings -->
+                        <CheckBox x:Name="cbStartWithWindows"
+                                 Content="Launch automatically at startup"
+                                 Checked="StartWithWindows_Changed"
+                                 Unchecked="StartWithWindows_Changed"
+                                 Margin="0,0,0,8"/>
+                        
+                        <CheckBox x:Name="cbMinimizeToTray"
+                                 Content="Minimize to system tray"
+                                 Checked="MinimizeToTray_Changed"
+                                 Unchecked="MinimizeToTray_Changed"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Diagnostic Tools -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Diagnostic Tools" 
+                                   FontSize="18" 
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimary}"
+                                   Margin="0,0,0,16"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="Detailed diagnostic logs are automatically saved" 
+                                          FontSize="12"
+                                          Foreground="{StaticResource TextSecondary}"/>
+                                <TextBlock x:Name="txtLogPath" 
+                                          Text="Log file location" 
+                                          FontSize="10"
+                                          Foreground="{StaticResource TextSecondary}"
+                                          Margin="0,2,0,0"/>
+                            </StackPanel>
+
+                            <Button Grid.Column="1"
+                                   Content="View Logs"
+                                   Click="ViewLog_Click"
+                                   Height="36"
+                                   Padding="16,0"
+                                   Background="{StaticResource SurfaceHover}"
+                                   BorderBrush="{StaticResource Border}"
+                                   BorderThickness="1"
+                                   Cursor="Hand">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                               BorderBrush="{TemplateBinding BorderBrush}"
+                                               BorderThickness="{TemplateBinding BorderThickness}"
+                                               CornerRadius="6"
+                                               Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+
+                            <Button Grid.Column="3"
+                                   Content="Open Folder"
+                                   Click="OpenLogFolder_Click"
+                                   Height="36"
+                                   Padding="16,0"
+                                   Background="{StaticResource SurfaceHover}"
+                                   BorderBrush="{StaticResource Border}"
+                                   BorderThickness="1"
+                                   Cursor="Hand">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                               BorderBrush="{TemplateBinding BorderBrush}"
+                                               BorderThickness="{TemplateBinding BorderThickness}"
+                                               CornerRadius="6"
+                                               Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Active Processes -->
+                <Border Style="{StaticResource Card}" x:Name="borderActiveProcesses" Visibility="Collapsed">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,12">
+                            <TextBlock Text="Optimized Applications" 
+                                       FontSize="18" 
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextPrimary}"
+                                       HorizontalAlignment="Left"/>
+                            <TextBlock x:Name="txtProcessCount" 
+                                       Text="5 active" 
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       Foreground="{StaticResource Success}"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="listActiveProcesses">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource SurfaceHover}"
+                                               CornerRadius="4"
+                                               Padding="12,8"
+                                               Margin="0,0,0,4">
+                                            <TextBlock Text="{Binding}" 
+                                                      FontSize="11"
+                                                      FontFamily="Consolas"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </StackPanel>
+                </Border>
+
+                <!-- Footer -->
+                <StackPanel Orientation="Horizontal" 
+                           HorizontalAlignment="Center" 
+                           Margin="0,24,0,24">
+                    <TextBlock Text="Made for OLED displays" 
+                              FontSize="11"
+                              Foreground="{StaticResource TextSecondary}"/>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Window>
