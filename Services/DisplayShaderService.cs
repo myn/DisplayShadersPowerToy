@@ -5,20 +5,18 @@ using DisplayShadersPowerToy.Models;
 namespace DisplayShadersPowerToy.Services;
 
 /// <summary>
-/// Service for managing ClearType settings
+/// Service for managing ClearType settings AND actual display shaders
 /// 
-/// IMPORTANT: This service does NOT implement actual display shaders.
-/// It only modifies Windows ClearType registry settings to provide
-/// workarounds for OLED displays. Due to Windows API limitations:
+/// DUAL MODE OPERATION:
+/// - Legacy Mode: Adjusts Windows ClearType registry settings (workaround)
+/// - Shader Mode: Uses real DirectWrite/D3D hooks with custom shaders (proper fix)
 /// 
-/// - Cannot implement RBG orientation for WOLED (only RGB/BGR supported)
-/// - Cannot fix vertical fringing on QD-OLED (ClearType is horizontal-only)
-/// - Cannot use custom subpixel masks
-/// - Only adjusts contrast/gamma values
+/// The shader mode requires DisplayShaderHook.dll to be present and injected
+/// into target processes. If not available, falls back to ClearType mode.
 /// 
-/// See docs/TECHNICAL_LIMITATIONS.md for details.
+/// See docs/TECHNICAL_LIMITATIONS.md and docs/ROADMAP.md for details.
 /// </summary>
-public class DisplayShaderService
+public class DisplayShaderService : IDisposable
 {
     private const string ClearTypeRegistryPath = @"Control Panel\Desktop";
     private const string FontSmoothingKey = "FontSmoothing";
@@ -36,31 +34,208 @@ public class DisplayShaderService
     private const uint SPIF_UPDATEINIFILE = 0x01;
     private const uint SPIF_SENDCHANGE = 0x02;
 
+    private readonly ShaderService? _shaderService;
+    private bool _shaderModeAvailable;
+    private InjectionManager? _injectionManager;
+
+    public DisplayShaderService()
+    {
+        // Check if shader mode is available
+        System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Initializing...");
+        
+        _shaderModeAvailable = ShaderService.IsHookDllAvailable();
+        
+        System.Diagnostics.Debug.WriteLine($"[DisplayShaderService] Shader mode available: {_shaderModeAvailable}");
+
+        if (_shaderModeAvailable)
+        {
+            _shaderService = new ShaderService();
+            
+            System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Attempting to initialize ShaderService...");
+            
+            if (!_shaderService.Initialize())
+            {
+                System.Diagnostics.Debug.WriteLine("[DisplayShaderService] ShaderService.Initialize() failed");
+                System.Diagnostics.Debug.WriteLine("[DisplayShaderService] This usually means:");
+                System.Diagnostics.Debug.WriteLine("[DisplayShaderService]   - Failed to create shared memory (might need admin rights)");
+                System.Diagnostics.Debug.WriteLine("[DisplayShaderService]   - Failed to create event object");
+                
+                _shaderModeAvailable = false;
+                _shaderService?.Dispose();
+                _shaderService = null;
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[DisplayShaderService] ShaderService.Initialize() succeeded");
+                
+                // Initialize injection manager
+                _injectionManager = new InjectionManager();
+                System.Diagnostics.Debug.WriteLine("[DisplayShaderService] InjectionManager created");
+            }
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Falling back to ClearType mode");
+        }
+    }
+
+    /// <summary>
+    /// Dispose of resources
+    /// </summary>
+    public void Dispose()
+    {
+        _injectionManager?.Dispose();
+        _shaderService?.Dispose();
+    }
+
+    /// <summary>
+    /// Check if real shader mode is available
+    /// </summary>
+    public bool IsShaderModeAvailable() => _shaderModeAvailable;
+
+    /// <summary>
+    /// Get shader mode status description
+    /// </summary>
+    public string GetShaderModeStatus()
+    {
+        if (!_shaderModeAvailable)
+        {
+            return "Shader Mode: Not Available (using ClearType fallback)";
+        }
+
+        int version = ShaderService.GetHookVersion();
+        int injectedCount = _injectionManager?.GetInjectedProcessCount() ?? 0;
+        
+        if (injectedCount > 0)
+        {
+            return $"Shader Mode: Active (Hook v{version}, {injectedCount} processes)";
+        }
+        
+        return $"Shader Mode: Ready (Hook v{version}, not injecting)";
+    }
+
+    /// <summary>
+    /// Enable shader injection into whitelisted processes
+    /// </summary>
+    public int EnableShaderInjection()
+    {
+        if (!_shaderModeAvailable || _injectionManager == null)
+        {
+            System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Cannot enable injection - shader mode not available");
+            return 0;
+        }
+
+        System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Enabling shader injection...");
+        int count = _injectionManager.InjectIntoProcesses();
+        System.Diagnostics.Debug.WriteLine($"[DisplayShaderService] Injected into {count} processes");
+        return count;
+    }
+
+    /// <summary>
+    /// Get number of processes with shader injection active
+    /// </summary>
+    public int GetInjectedProcessCount()
+    {
+        return _injectionManager?.GetInjectedProcessCount() ?? 0;
+    }
+
+    /// <summary>
+    /// Get list of injected process names
+    /// </summary>
+    public List<string> GetInjectedProcessNames()
+    {
+        return _injectionManager?.GetInjectedProcessNames() ?? new List<string>();
+    }
+
     /// <summary>
     /// Apply display shader settings based on subpixel layout
+    /// Uses real shaders if available, otherwise falls back to ClearType
     /// </summary>
     public void ApplyShaderSettings(DisplaySettings settings)
     {
-        if (!settings.EnableShader)
+        System.Diagnostics.Debug.WriteLine($"[DisplayShaderService] ApplyShaderSettings called");
+        System.Diagnostics.Debug.WriteLine($"  - Shader Injection: {settings.EnableShaderInjection}");
+        System.Diagnostics.Debug.WriteLine($"  - ClearType: {settings.EnableClearType}");
+        
+        // Apply shader injection if enabled and available
+        if (settings.EnableShaderInjection && _shaderModeAvailable && _shaderService != null)
         {
-            // Disable ClearType completely
-            DisableClearType();
-            return;
+            ApplyRealShaderSettings(settings);
         }
+        else if (_injectionManager != null)
+        {
+            // Stop monitoring if shader injection disabled
+            _injectionManager.StopContinuousMonitoring();
+            System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Shader injection disabled, stopped monitoring");
+        }
+        
+        // Apply ClearType settings if enabled
+        if (settings.EnableClearType)
+        {
+            ApplyLegacyClearTypeSettings(settings);
+        }
+        else
+        {
+            // Disable ClearType if not enabled
+            DisableClearType();
+        }
+    }
 
-        switch (settings.SubpixelLayout)
+    /// <summary>
+    /// Apply settings using real DirectWrite/D3D shaders (the proper way)
+    /// </summary>
+    private void ApplyRealShaderSettings(DisplaySettings settings)
+    {
+        if (_shaderService == null || _injectionManager == null) return;
+
+        System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Applying REAL shader settings");
+        
+        // Create a temporary settings object with shader-specific values
+        var shaderSettings = new DisplaySettings
+        {
+            EnableShaderInjection = settings.EnableShaderInjection,
+            ShaderLayout = settings.ShaderLayout,
+            ShaderIntensity = settings.ShaderIntensity
+        };
+        
+        _shaderService.UpdateShaderConfig(shaderSettings);
+        
+        // Start continuous monitoring - this will inject into ALL current and future GUI processes
+        if (!_injectionManager.IsMonitoring)
+        {
+            System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Starting continuous monitoring for ALL GUI processes...");
+            _injectionManager.StartContinuousMonitoring();
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Continuous monitoring already active");
+        }
+    }
+
+    /// <summary>
+    /// Apply settings using legacy ClearType registry tweaks (workaround)
+    /// </summary>
+    private void ApplyLegacyClearTypeSettings(DisplaySettings settings)
+    {
+        System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Applying legacy ClearType settings");
+
+        // Use ClearType-specific layout and intensity
+        var layout = settings.ClearTypeLayout;
+        var intensity = settings.ClearTypeIntensity;
+
+        switch (layout)
         {
             case SubpixelLayout.RgbStripe:
-                ApplyRgbStripeSettings(settings);
+                ApplyRgbStripeSettings(intensity);
                 break;
             case SubpixelLayout.WrgbStripe:
-                ApplyWrgbStripeSettings(settings);
+                ApplyWrgbStripeSettings(intensity);
                 break;
             case SubpixelLayout.RgbTriangular:
-                ApplyRgbTriangularSettings(settings);
+                ApplyRgbTriangularSettings(intensity);
                 break;
             case SubpixelLayout.Pentile:
-                ApplyPentileSettings(settings);
+                ApplyPentileSettings(intensity);
                 break;
             case SubpixelLayout.None:
                 DisableClearType();
@@ -74,11 +249,11 @@ public class DisplayShaderService
     /// <summary>
     /// Apply settings for standard RGB stripe displays (default ClearType)
     /// </summary>
-    private void ApplyRgbStripeSettings(DisplaySettings settings)
+    private void ApplyRgbStripeSettings(double intensity)
     {
         SetClearTypeEnabled(true);
         SetClearTypeOrientation(1); // RGB
-        SetClearTypeContrast((uint)(1400 * settings.ShaderIntensity));
+        SetClearTypeContrast((uint)(1400 * intensity));
     }
 
     /// <summary>
@@ -89,17 +264,17 @@ public class DisplayShaderService
     /// We can only reduce contrast to minimize color fringing.
     /// A proper fix would require actual display shaders.
     /// </summary>
-    private void ApplyWrgbStripeSettings(DisplaySettings settings)
+    private void ApplyWrgbStripeSettings(double intensity)
     {
         SetClearTypeEnabled(true);
         SetClearTypeOrientation(1); // Still RGB orientation (limitation: no RBG mode exists)
-        SetClearTypeContrast((uint)(800 * settings.ShaderIntensity)); // Lower contrast to reduce color fringing
+        SetClearTypeContrast((uint)(800 * intensity)); // Lower contrast to reduce color fringing
         
         // Additional registry settings for WOLED
         using var key = Registry.CurrentUser.CreateSubKey(ClearTypeRegistryPath);
         if (key != null)
         {
-            key.SetValue(FontSmoothingGammaKey, (int)(1200 * settings.ShaderIntensity), RegistryValueKind.DWord);
+            key.SetValue(FontSmoothingGammaKey, (int)(1200 * intensity), RegistryValueKind.DWord);
         }
     }
 
@@ -111,34 +286,34 @@ public class DisplayShaderService
     /// Triangular layouts with green on top and red/blue on bottom require
     /// actual display shaders to fix properly.
     /// </summary>
-    private void ApplyRgbTriangularSettings(DisplaySettings settings)
+    private void ApplyRgbTriangularSettings(double intensity)
     {
         SetClearTypeEnabled(true);
         SetClearTypeOrientation(1); // RGB orientation
         // For triangular subpixels, we need even more conservative settings
-        SetClearTypeContrast((uint)(600 * settings.ShaderIntensity));
+        SetClearTypeContrast((uint)(600 * intensity));
         
         using var key = Registry.CurrentUser.CreateSubKey(ClearTypeRegistryPath);
         if (key != null)
         {
-            key.SetValue(FontSmoothingGammaKey, (int)(1000 * settings.ShaderIntensity), RegistryValueKind.DWord);
+            key.SetValue(FontSmoothingGammaKey, (int)(1000 * intensity), RegistryValueKind.DWord);
         }
     }
 
     /// <summary>
     /// Apply settings for PenTile displays
     /// </summary>
-    private void ApplyPentileSettings(DisplaySettings settings)
+    private void ApplyPentileSettings(double intensity)
     {
         SetClearTypeEnabled(true);
         SetClearTypeOrientation(1); // RGB
         // PenTile benefits from reduced ClearType
-        SetClearTypeContrast((uint)(700 * settings.ShaderIntensity));
+        SetClearTypeContrast((uint)(700 * intensity));
         
         using var key = Registry.CurrentUser.CreateSubKey(ClearTypeRegistryPath);
         if (key != null)
         {
-            key.SetValue(FontSmoothingGammaKey, (int)(1100 * settings.ShaderIntensity), RegistryValueKind.DWord);
+            key.SetValue(FontSmoothingGammaKey, (int)(1100 * intensity), RegistryValueKind.DWord);
         }
     }
 
@@ -231,34 +406,61 @@ public class DisplayShaderService
     }
 
     /// <summary>
-    /// Get current ClearType settings
+    /// Get current ClearType AND shader settings
     /// </summary>
     public DisplaySettings GetCurrentSettings()
     {
         var settings = new DisplaySettings();
 
+        // Read ClearType settings from registry
         using var key = Registry.CurrentUser.OpenSubKey(ClearTypeRegistryPath);
         if (key != null)
         {
             var fontSmoothing = key.GetValue(FontSmoothingKey)?.ToString();
             var fontSmoothingType = key.GetValue(FontSmoothingTypeKey);
 
-            settings.EnableShader = fontSmoothing == "2" && fontSmoothingType?.ToString() == "2";
+            bool clearTypeEnabled = fontSmoothing == "2" && fontSmoothingType?.ToString() == "2";
+            
+            settings.EnableClearType = clearTypeEnabled;
             
             // Try to detect current layout based on settings
             var contrast = key.GetValue(FontSmoothingGammaKey);
             if (contrast != null)
             {
                 int contrastValue = Convert.ToInt32(contrast);
+                SubpixelLayout detectedLayout;
+                
                 if (contrastValue <= 600)
-                    settings.SubpixelLayout = SubpixelLayout.RgbTriangular;
+                    detectedLayout = SubpixelLayout.RgbTriangular;
                 else if (contrastValue <= 800)
-                    settings.SubpixelLayout = SubpixelLayout.WrgbStripe;
+                    detectedLayout = SubpixelLayout.WrgbStripe;
                 else if (contrastValue <= 1000)
-                    settings.SubpixelLayout = SubpixelLayout.Pentile;
+                    detectedLayout = SubpixelLayout.Pentile;
                 else
-                    settings.SubpixelLayout = SubpixelLayout.RgbStripe;
+                    detectedLayout = SubpixelLayout.RgbStripe;
+                
+                settings.ClearTypeLayout = detectedLayout;
             }
+            else
+            {
+                settings.ClearTypeLayout = SubpixelLayout.RgbStripe;
+            }
+        }
+        
+        // Read shader settings from shared memory (if available)
+        if (_shaderModeAvailable && _shaderService != null)
+        {
+            var shaderSettings = _shaderService.ReadCurrentConfig();
+            settings.EnableShaderInjection = shaderSettings.EnableShaderInjection;
+            settings.ShaderLayout = shaderSettings.ShaderLayout;
+            settings.ShaderIntensity = shaderSettings.ShaderIntensity;
+        }
+        else
+        {
+            // Shader mode not available, use defaults
+            settings.EnableShaderInjection = false;
+            settings.ShaderLayout = SubpixelLayout.RgbStripe;
+            settings.ShaderIntensity = 1.0;
         }
 
         return settings;

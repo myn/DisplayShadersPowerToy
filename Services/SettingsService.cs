@@ -67,9 +67,17 @@ public class SettingsService
             using var key = Registry.CurrentUser.CreateSubKey(SettingsRegistryPath);
             if (key != null)
             {
-                key.SetValue("SubpixelLayout", (int)settings.SubpixelLayout);
-                key.SetValue("EnableShader", settings.EnableShader ? 1 : 0);
+                // Save shader injection settings
+                key.SetValue("EnableShaderInjection", settings.EnableShaderInjection ? 1 : 0);
+                key.SetValue("ShaderLayout", (int)settings.ShaderLayout);
                 key.SetValue("ShaderIntensity", settings.ShaderIntensity);
+                
+                // Save ClearType settings
+                key.SetValue("EnableClearType", settings.EnableClearType ? 1 : 0);
+                key.SetValue("ClearTypeLayout", (int)settings.ClearTypeLayout);
+                key.SetValue("ClearTypeIntensity", settings.ClearTypeIntensity);
+                
+                // Save application settings
                 key.SetValue("StartWithWindows", settings.StartWithWindows ? 1 : 0);
                 key.SetValue("MinimizeToTray", settings.MinimizeToTray ? 1 : 0);
             }
@@ -92,16 +100,17 @@ public class SettingsService
             using var key = Registry.CurrentUser.OpenSubKey(SettingsRegistryPath);
             if (key != null)
             {
-                var subpixelLayout = key.GetValue("SubpixelLayout");
-                if (subpixelLayout != null)
+                // Load shader injection settings
+                var enableShaderInjection = key.GetValue("EnableShaderInjection");
+                if (enableShaderInjection != null)
                 {
-                    settings.SubpixelLayout = (Models.SubpixelLayout)Convert.ToInt32(subpixelLayout);
+                    settings.EnableShaderInjection = Convert.ToInt32(enableShaderInjection) == 1;
                 }
 
-                var enableShader = key.GetValue("EnableShader");
-                if (enableShader != null)
+                var shaderLayout = key.GetValue("ShaderLayout");
+                if (shaderLayout != null)
                 {
-                    settings.EnableShader = Convert.ToInt32(enableShader) == 1;
+                    settings.ShaderLayout = (Models.SubpixelLayout)Convert.ToInt32(shaderLayout);
                 }
 
                 var shaderIntensity = key.GetValue("ShaderIntensity");
@@ -110,6 +119,26 @@ public class SettingsService
                     settings.ShaderIntensity = Convert.ToDouble(shaderIntensity);
                 }
 
+                // Load ClearType settings
+                var enableClearType = key.GetValue("EnableClearType");
+                if (enableClearType != null)
+                {
+                    settings.EnableClearType = Convert.ToInt32(enableClearType) == 1;
+                }
+
+                var clearTypeLayout = key.GetValue("ClearTypeLayout");
+                if (clearTypeLayout != null)
+                {
+                    settings.ClearTypeLayout = (Models.SubpixelLayout)Convert.ToInt32(clearTypeLayout);
+                }
+
+                var clearTypeIntensity = key.GetValue("ClearTypeIntensity");
+                if (clearTypeIntensity != null)
+                {
+                    settings.ClearTypeIntensity = Convert.ToDouble(clearTypeIntensity);
+                }
+
+                // Load application settings
                 var startWithWindows = key.GetValue("StartWithWindows");
                 if (startWithWindows != null)
                 {

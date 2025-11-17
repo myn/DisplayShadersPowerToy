@@ -6,11 +6,11 @@
         xmlns:local="clr-namespace:DisplayShadersPowerToy"
         mc:Ignorable="d"
         Title="Display Shaders PowerToy" 
-        Height="650" 
-        Width="1050"
+        Height="700" 
+        Width="1100"
         ResizeMode="CanResize"
-        MinWidth="1050"
-        MinHeight="650"
+        MinWidth="1100"
+        MinHeight="700"
         WindowStartupLocation="CenterScreen"
         Closing="Window_Closing"
         StateChanged="Window_StateChanged">
@@ -172,6 +172,47 @@
                                FontSize="11"
                                Foreground="{DynamicResource SecondaryForeground}"
                                Margin="0,3,0,0"/>
+                    
+                    <!-- Status Indicators -->
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <!-- Shader Injection Status -->
+                        <Border x:Name="statusShaderBadge"
+                                Background="#E8F4F8" 
+                                BorderBrush="#4A9EFF" 
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="8,4"
+                                Margin="0,0,8,0"
+                                Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🎨" 
+                                          Margin="0,0,6,0"
+                                          VerticalAlignment="Center"/>
+                                <TextBlock FontSize="10" Foreground="#005A9E" VerticalAlignment="Center">
+                                    <Run Text="Shader Hook: " FontWeight="SemiBold"/>
+                                    <Run x:Name="runShaderStatus" Text="Ready"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                        
+                        <!-- ClearType Status -->
+                        <Border x:Name="statusClearTypeBadge"
+                                Background="#E8F4F8" 
+                                BorderBrush="#4A9EFF" 
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="8,4">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📝" 
+                                          Margin="0,0,6,0"
+                                          VerticalAlignment="Center"/>
+                                <TextBlock FontSize="10" Foreground="#005A9E" VerticalAlignment="Center">
+                                    <Run Text="ClearType: " FontWeight="SemiBold"/>
+                                    <Run x:Name="runClearTypeStatus" Text="Active"/>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -247,135 +288,355 @@
         <!-- Main Content -->
         <Grid Grid.Row="1" Margin="18">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="400"/>
+                <ColumnDefinition Width="520"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <!-- Left Panel: Settings -->
-            <StackPanel Grid.Column="0" Margin="0,0,10,0" Height="622" VerticalAlignment="Top">
-                <!-- Subpixel Layout Selection -->
-                <GroupBox Header="Subpixel Layout">
-                    <StackPanel>
-                        <RadioButton x:Name="rbRgbStripe" 
-                                     Content="RGB Stripe (Standard LCD)" 
-                                     GroupName="SubpixelLayout"
-                                     Checked="SubpixelLayout_Changed"/>
-                        <RadioButton x:Name="rbWrgbStripe" 
-                                     Content="WRGB Stripe (WOLED - LG OLED)" 
-                                     GroupName="SubpixelLayout"
-                                     Checked="SubpixelLayout_Changed"/>
-                        <RadioButton x:Name="rbRgbTriangular" 
-                                     Content="RGB Triangular (QD-OLED - Samsung)" 
-                                     GroupName="SubpixelLayout"
-                                     Checked="SubpixelLayout_Changed"/>
-                        <RadioButton x:Name="rbPentile" 
-                                     Content="PenTile (Some AMOLED displays)" 
-                                     GroupName="SubpixelLayout"
-                                     Checked="SubpixelLayout_Changed"/>
-                        <RadioButton x:Name="rbNone" 
-                                     Content="None (Disable ClearType)" 
-                                     GroupName="SubpixelLayout"
-                                     Checked="SubpixelLayout_Changed"/>
-                    </StackPanel>
-                </GroupBox>
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,10,0">
+                <StackPanel>
+                    
+                    <!-- SHADER INJECTION SETTINGS (Hooking Mode) -->
+                    <Border Background="{DynamicResource CardBackground}"
+                            BorderBrush="#4CAF50"
+                            BorderThickness="2"
+                            CornerRadius="8"
+                            Padding="16"
+                            Margin="0,0,0,16">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="🎨 Shader Injection (Advanced)" 
+                                               FontSize="16" 
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource CardForeground}"/>
+                                    <TextBlock Text="Real DirectWrite shader hooking - crystal clear text on all apps" 
+                                               FontSize="10"
+                                               Foreground="{DynamicResource SecondaryForeground}"
+                                               Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <ToggleButton x:Name="toggleShaderInjection"
+                                             Grid.Column="1"
+                                             Width="50"
+                                             Height="26"
+                                             VerticalAlignment="Center"
+                                             Checked="ShaderInjection_Changed"
+                                             Unchecked="ShaderInjection_Changed">
+                                    <ToggleButton.Style>
+                                        <Style TargetType="ToggleButton">
+                                            <Setter Property="Background" Value="#CCCCCC"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="ToggleButton">
+                                                        <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="13">
+                                                            <Border x:Name="Thumb" Width="20" Height="20" Background="White" CornerRadius="10" 
+                                                                   HorizontalAlignment="Left" Margin="3,3,3,3">
+                                                                <Border.Effect>
+                                                                    <DropShadowEffect ShadowDepth="0" BlurRadius="3" Opacity="0.3"/>
+                                                                </Border.Effect>
+                                                            </Border>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsChecked" Value="True">
+                                                                <Setter TargetName="Border" Property="Background" Value="#4CAF50"/>
+                                                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ToggleButton.Style>
+                                </ToggleButton>
+                            </Grid>
 
-                <!-- Shader Settings -->
-                <GroupBox Header="ClearType Settings">
-                    <StackPanel>
-                        <CheckBox x:Name="cbEnableShader" 
-                                  Content="Enable ClearType Optimization" 
-                                  Checked="EnableShader_Changed"
-                                  Unchecked="EnableShader_Changed"/>
+                            <StackPanel x:Name="shaderInjectionPanel">
+                                <!-- Subpixel Layout for Shaders -->
+                                <TextBlock Text="Subpixel Layout" 
+                                          FontWeight="SemiBold"
+                                          FontSize="12"
+                                          Foreground="{DynamicResource CardForeground}"
+                                          Margin="0,0,0,6"/>
+                                <RadioButton x:Name="rbShaderRgbStripe" 
+                                             Content="RGB Stripe (Standard LCD)" 
+                                             GroupName="ShaderLayout"
+                                             Checked="ShaderLayout_Changed"/>
+                                <RadioButton x:Name="rbShaderWrgbStripe" 
+                                             Content="WRGB Stripe (WOLED - LG OLED)" 
+                                             GroupName="ShaderLayout"
+                                             Checked="ShaderLayout_Changed"/>
+                                <RadioButton x:Name="rbShaderRgbTriangular" 
+                                             Content="RGB Triangular (QD-OLED - Samsung)" 
+                                             GroupName="ShaderLayout"
+                                             Checked="ShaderLayout_Changed"/>
+                                <RadioButton x:Name="rbShaderPentile" 
+                                             Content="PenTile (AMOLED)" 
+                                             GroupName="ShaderLayout"
+                                             Checked="ShaderLayout_Changed"/>
 
-                        <TextBlock Text="Contrast Adjustment:" 
-                                  Margin="0,10,0,6"
-                                  Foreground="{DynamicResource CardForeground}"/>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="60"/>
-                            </Grid.ColumnDefinitions>
-                            <Slider x:Name="sliderIntensity" 
-                                    Grid.Column="0"
-                                    Minimum="0" 
-                                    Maximum="1" 
-                                    Value="1.0" 
-                                    TickFrequency="0.1" 
-                                    IsSnapToTickEnabled="True"
-                                    ValueChanged="ShaderIntensity_Changed"
-                                    VerticalAlignment="Center"/>
-                            <Border Grid.Column="1"
-                                   Background="{DynamicResource CardBorder}"
-                                   CornerRadius="4"
-                                   Padding="8,4"
-                                   Margin="10,0,0,0">
-                                <TextBlock Text="{Binding ElementName=sliderIntensity, Path=Value, StringFormat={}{0:P0}}" 
-                                           TextAlignment="Center"
-                                           FontWeight="SemiBold"
-                                           Foreground="{DynamicResource CardForeground}"/>
+                                <!-- Shader Intensity -->
+                                <TextBlock Text="Shader Intensity" 
+                                          Margin="0,12,0,6"
+                                          FontWeight="SemiBold"
+                                          FontSize="12"
+                                          Foreground="{DynamicResource CardForeground}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="60"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="sliderShaderIntensity" 
+                                            Grid.Column="0"
+                                            Minimum="0" 
+                                            Maximum="1" 
+                                            Value="1.0" 
+                                            TickFrequency="0.1" 
+                                            IsSnapToTickEnabled="True"
+                                            ValueChanged="ShaderIntensity_Changed"
+                                            VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1"
+                                           Background="{DynamicResource CardBorder}"
+                                           CornerRadius="4"
+                                           Padding="8,4"
+                                           Margin="10,0,0,0">
+                                        <TextBlock Text="{Binding ElementName=sliderShaderIntensity, Path=Value, StringFormat={}{0:P0}}" 
+                                                   TextAlignment="Center"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource CardForeground}"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Status Info -->
+                                <Border BorderBrush="#4CAF50"
+                                        Background="#E8F5E9"
+                                        BorderThickness="1" 
+                                        Padding="10" 
+                                        CornerRadius="4"
+                                        Margin="0,12,0,0">
+                                    <StackPanel>
+                                        <TextBlock FontSize="10" Foreground="#2E7D32">
+                                            <Run Text="ℹ️ " FontWeight="Bold"/>
+                                            <Run Text="Status: " FontWeight="SemiBold"/>
+                                            <Run x:Name="runShaderModeStatus" Text="Ready to inject"/>
+                                        </TextBlock>
+                                        <TextBlock x:Name="txtShaderProcessList"
+                                                   TextWrapping="Wrap" 
+                                                   FontSize="9"
+                                                   Foreground="#2E7D32"
+                                                   Margin="14,4,0,0"
+                                                   LineHeight="14"
+                                                   Text="Click Apply to inject shaders into all running applications"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- CLEARTYPE SETTINGS (Registry Mode) -->
+                    <Border Background="{DynamicResource CardBackground}"
+                            BorderBrush="#2196F3"
+                            BorderThickness="2"
+                            CornerRadius="8"
+                            Padding="16"
+                            Margin="0,0,0,16">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="📝 ClearType Optimization (Fallback)" 
+                                               FontSize="16" 
+                                               FontWeight="Bold"
+                                               Foreground="{DynamicResource CardForeground}"/>
+                                    <TextBlock Text="Windows registry-based ClearType adjustments (always works)" 
+                                               FontSize="10"
+                                               Foreground="{DynamicResource SecondaryForeground}"
+                                               Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <ToggleButton x:Name="toggleClearType"
+                                             Grid.Column="1"
+                                             Width="50"
+                                             Height="26"
+                                             VerticalAlignment="Center"
+                                             Checked="ClearType_Changed"
+                                             Unchecked="ClearType_Changed">
+                                    <ToggleButton.Style>
+                                        <Style TargetType="ToggleButton">
+                                            <Setter Property="Background" Value="#CCCCCC"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="ToggleButton">
+                                                        <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="13">
+                                                            <Border x:Name="Thumb" Width="20" Height="20" Background="White" CornerRadius="10" 
+                                                                   HorizontalAlignment="Left" Margin="3,3,3,3">
+                                                                <Border.Effect>
+                                                                    <DropShadowEffect ShadowDepth="0" BlurRadius="3" Opacity="0.3"/>
+                                                                </Border.Effect>
+                                                            </Border>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsChecked" Value="True">
+                                                                <Setter TargetName="Border" Property="Background" Value="#2196F3"/>
+                                                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </ToggleButton.Style>
+                                </ToggleButton>
+                            </Grid>
+
+                            <StackPanel x:Name="clearTypePanel">
+                                <!-- Subpixel Layout for ClearType -->
+                                <TextBlock Text="Subpixel Layout" 
+                                          FontWeight="SemiBold"
+                                          FontSize="12"
+                                          Foreground="{DynamicResource CardForeground}"
+                                          Margin="0,0,0,6"/>
+                                <RadioButton x:Name="rbClearTypeRgbStripe" 
+                                             Content="RGB Stripe (Standard LCD)" 
+                                             GroupName="ClearTypeLayout"
+                                             Checked="ClearTypeLayout_Changed"/>
+                                <RadioButton x:Name="rbClearTypeWrgbStripe" 
+                                             Content="WRGB Stripe (WOLED - LG OLED)" 
+                                             GroupName="ClearTypeLayout"
+                                             Checked="ClearTypeLayout_Changed"/>
+                                <RadioButton x:Name="rbClearTypeRgbTriangular" 
+                                             Content="RGB Triangular (QD-OLED - Samsung)" 
+                                             GroupName="ClearTypeLayout"
+                                             Checked="ClearTypeLayout_Changed"/>
+                                <RadioButton x:Name="rbClearTypePentile" 
+                                             Content="PenTile (AMOLED)" 
+                                             GroupName="ClearTypeLayout"
+                                             Checked="ClearTypeLayout_Changed"/>
+                                <RadioButton x:Name="rbClearTypeNone" 
+                                             Content="None (Disable ClearType)" 
+                                             GroupName="ClearTypeLayout"
+                                             Checked="ClearTypeLayout_Changed"/>
+
+                                <!-- ClearType Contrast -->
+                                <TextBlock Text="Contrast Adjustment" 
+                                          Margin="0,12,0,6"
+                                          FontWeight="SemiBold"
+                                          FontSize="12"
+                                          Foreground="{DynamicResource CardForeground}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="60"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="sliderClearTypeIntensity" 
+                                            Grid.Column="0"
+                                            Minimum="0" 
+                                            Maximum="1" 
+                                            Value="1.0" 
+                                            TickFrequency="0.1" 
+                                            IsSnapToTickEnabled="True"
+                                            ValueChanged="ClearTypeIntensity_Changed"
+                                            VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1"
+                                           Background="{DynamicResource CardBorder}"
+                                           CornerRadius="4"
+                                           Padding="8,4"
+                                           Margin="10,0,0,0">
+                                        <TextBlock Text="{Binding ElementName=sliderClearTypeIntensity, Path=Value, StringFormat={}{0:P0}}" 
+                                                   TextAlignment="Center"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource CardForeground}"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Info -->
+                                <Border BorderBrush="#2196F3"
+                                        Background="#E3F2FD"
+                                        BorderThickness="1" 
+                                        Padding="10" 
+                                        CornerRadius="4"
+                                        Margin="0,12,0,0">
+                                    <TextBlock TextWrapping="Wrap" 
+                                               FontSize="9"
+                                               Foreground="#1565C0"
+                                               LineHeight="14">
+                                        Registry-based ClearType optimization. Works system-wide but may require app restart. Limited effectiveness on OLED displays.
+                                    </TextBlock>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Application Settings -->
+                    <GroupBox Header="Application Settings">
+                        <StackPanel>
+                            <CheckBox x:Name="cbStartWithWindows" 
+                                      Content="Start with Windows" 
+                                      Checked="StartWithWindows_Changed"
+                                      Unchecked="StartWithWindows_Changed"/>
+                            <CheckBox x:Name="cbMinimizeToTray" 
+                                      Content="Minimize to system tray" 
+                                      Checked="MinimizeToTray_Changed"
+                                      Unchecked="MinimizeToTray_Changed"/>
+                            
+                            <!-- Diagnostic Log Button -->
+                            <Border BorderBrush="{DynamicResource CardBorder}"
+                                    BorderThickness="1" 
+                                    Padding="10" 
+                                    CornerRadius="4"
+                                    Margin="0,12,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="📋 Diagnostic Logging" 
+                                               FontWeight="SemiBold"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource CardForeground}"
+                                               Margin="0,0,0,6"/>
+                                    <TextBlock TextWrapping="Wrap" 
+                                               FontSize="9"
+                                               Foreground="{DynamicResource SecondaryForeground}"
+                                               Margin="0,0,0,8"
+                                               LineHeight="13">
+                                        Detailed logs are saved to help debug issues. Click below to view or share the log file.
+                                    </TextBlock>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button x:Name="btnViewLog" 
+                                                Content="📄 View Log File" 
+                                                Click="ViewLog_Click"
+                                                Style="{StaticResource SecondaryButton}"
+                                                Margin="0"
+                                                Height="28"
+                                                Padding="8,4"/>
+                                        <Button x:Name="btnOpenLogFolder" 
+                                                Content="📁 Open Log Folder" 
+                                                Click="OpenLogFolder_Click"
+                                                Style="{StaticResource SecondaryButton}"
+                                                Height="28"
+                                                Padding="8,4"/>
+                                    </StackPanel>
+                                </StackPanel>
                             </Border>
-                        </Grid>
-                        
-                        <!-- Disclaimer -->
-                        <Border BorderBrush="{DynamicResource CardBorder}"
-                                Background="#FFF9E6"
-                                BorderThickness="1" 
-                                Padding="10" 
-                                CornerRadius="4"
-                                Margin="0,12,0,0">
-                            <TextBlock TextWrapping="Wrap" 
-                                       FontSize="10"
-                                       Foreground="#856404">
-                                <Run Text="⚠️ Note: " FontWeight="Bold"/>
-                                <Run Text="This tool adjusts ClearType settings only. It cannot fully fix OLED subpixel fringing due to Windows API limitations."/>
-                            </TextBlock>
-                        </Border>
-                    </StackPanel>
-                </GroupBox>
+                        </StackPanel>
+                    </GroupBox>
 
-                <!-- Application Settings -->
-                <GroupBox Header="Application Settings">
-                    <StackPanel>
-                        <CheckBox x:Name="cbStartWithWindows" 
-                                  Content="Start with Windows" 
-                                  Checked="StartWithWindows_Changed"
-                                  Unchecked="StartWithWindows_Changed"/>
-                        <CheckBox x:Name="cbMinimizeToTray" 
-                                  Content="Minimize to system tray" 
-                                  Checked="MinimizeToTray_Changed"
-                                  Unchecked="MinimizeToTray_Changed"/>
-                    </StackPanel>
-                </GroupBox>
-
-                <!-- Action Buttons -->
-                <Grid Margin="0,0,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <Button x:Name="btnReset" 
-                            Grid.Column="0"
-                            Content="🔄 Reset" 
-                            Click="Reset_Click"
-                            Style="{StaticResource DangerButton}"
-                            HorizontalAlignment="Left"
-                            Margin="0"
-                            ToolTip="Restore Windows default ClearType settings"/>
-
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button x:Name="btnPreview" 
-                                Content="👁️ Preview" 
-                                Click="Preview_Click"
-                                Style="{StaticResource SecondaryButton}"/>
-                        <Button x:Name="btnApply" 
-                                Content="✓ Apply" 
-                                Click="Apply_Click"
-                                Style="{StaticResource PrimaryButton}"
-                                IsDefault="True"/>
-                    </StackPanel>
-                </Grid>
-            </StackPanel>
+                    <!-- Action Buttons -->
+                    <Grid Margin="0,8,0,0">
+                        <Button x:Name="btnReset" 
+                                Content="🔄 Reset All to Defaults" 
+                                Click="Reset_Click"
+                                Style="{StaticResource DangerButton}"
+                                HorizontalAlignment="Left"
+                                Margin="0"
+                                ToolTip="Restore Windows defaults for both modes"/>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
 
             <!-- Right Panel: Preview -->
             <Border Grid.Column="1" 
@@ -397,7 +658,7 @@
                                    Margin="0,0,0,18"
                                    FontSize="11"
                                    Foreground="{DynamicResource PreviewSecondaryForeground}">
-                            <Run Text="Current: "/>
+                            <Run Text="Active modes: "/>
                             <Run x:Name="runPreviewSettings" FontWeight="SemiBold"/>
                         </TextBlock>
 

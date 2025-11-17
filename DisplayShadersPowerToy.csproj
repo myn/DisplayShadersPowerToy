@@ -1,16 +1,93 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<UseWPF>true</UseWPF>
+		<UseWindowsForms>true</UseWindowsForms>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<AssemblyName>DisplayShadersPowerToy</AssemblyName>
+		<Version>2.0.0</Version>
+		<Authors>Display Shaders PowerToy Contributors</Authors>
+		<Product>Display Shaders PowerToy</Product>
+		<Description>Real display shader support for OLED text rendering with DirectWrite hooks</Description>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
+	</ItemGroup>
+
+	<!-- Native C++ Hook Project reference (if exists) -->
+	<ItemGroup>
+		<None Include="Native\DisplayShaderHook\**\*" />
+	</ItemGroup>
+	<ItemGroup>
+		<Folder Include="DllTest\" />
+	</ItemGroup>
+
+	<!-- Copy native DLL to output directory when built -->
+	<Target Name="CopyNativeDll" AfterTargets="Build">
+		<PropertyGroup>
+			<!-- Primary locations - Native subfolder -->
+			<NativeDllPath>$(ProjectDir)Native\DisplayShaderHook\bin\x64\$(Configuration)\DisplayShaderHook.dll</NativeDllPath>
+			<NativeDllPathRelease>$(ProjectDir)Native\DisplayShaderHook\bin\x64\Release\DisplayShaderHook.dll</NativeDllPathRelease>
+
+			<!-- Alternate locations - Solution root -->
+			<NativeDllPath2>$(SolutionDir)bin\x64\$(Configuration)\DisplayShaderHook.dll</NativeDllPath2>
+			<NativeDllPath3>$(SolutionDir)bin\x64\Release\DisplayShaderHook.dll</NativeDllPath3>
+
+			<!-- Additional fallback - parent directory -->
+			<NativeDllPath4>$(SolutionDir)..\bin\x64\$(Configuration)\DisplayShaderHook.dll</NativeDllPath4>
+			<NativeDllPath5>$(SolutionDir)..\bin\x64\Release\DisplayShaderHook.dll</NativeDllPath5>
+		</PropertyGroup>
+
+		<!-- Try primary location (Native subfolder, matching configuration) -->
+		<Copy SourceFiles="$(NativeDllPath)" DestinationFolder="$(OutputPath)" Condition="Exists('$(NativeDllPath)')" SkipUnchangedFiles="true">
+			<Output TaskParameter="DestinationFiles" ItemName="FileWrites" />
+		</Copy>
+		<Message Text="Copied DLL from: $(NativeDllPath)" Condition="Exists('$(NativeDllPath)')" Importance="high" />
+
+		<!-- Fallback to Release DLL in Native subfolder -->
+		<Copy SourceFiles="$(NativeDllPathRelease)" DestinationFolder="$(OutputPath)" Condition="!Exists('$(NativeDllPath)') And Exists('$(NativeDllPathRelease)')" SkipUnchangedFiles="true">
+			<Output TaskParameter="DestinationFiles" ItemName="FileWrites" />
+		</Copy>
+		<Message Text="Copied DLL from: $(NativeDllPathRelease) (fallback to Release)" Condition="!Exists('$(NativeDllPath)') And Exists('$(NativeDllPathRelease)')" Importance="high" />
+
+		<!-- Try solution root location -->
+		<Copy SourceFiles="$(NativeDllPath2)" DestinationFolder="$(OutputPath)" Condition="!Exists('$(NativeDllPath)') And !Exists('$(NativeDllPathRelease)') And Exists('$(NativeDllPath2)')" SkipUnchangedFiles="true">
+			<Output TaskParameter="DestinationFiles" ItemName="FileWrites" />
+		</Copy>
+		<Message Text="Copied DLL from: $(NativeDllPath2)" Condition="!Exists('$(NativeDllPath)') And !Exists('$(NativeDllPathRelease)') And Exists('$(NativeDllPath2)')" Importance="high" />
+
+		<!-- Try solution root Release location -->
+		<Copy SourceFiles="$(NativeDllPath3)" DestinationFolder="$(OutputPath)" Condition="!Exists('$(NativeDllPath)') And !Exists('$(NativeDllPathRelease)') And !Exists('$(NativeDllPath2)') And Exists('$(NativeDllPath3)')" SkipUnchangedFiles="true">
+			<Output TaskParameter="DestinationFiles" ItemName="FileWrites" />
+		</Copy>
+		<Message Text="Copied DLL from: $(NativeDllPath3)" Condition="!Exists('$(NativeDllPath)') And !Exists('$(NativeDllPathRelease)') And !Exists('$(NativeDllPath2)') And Exists('$(NativeDllPath3)')" Importance="high" />
+
+		<!-- Parent directory fallback -->
+		<Copy SourceFiles="$(NativeDllPath4)" DestinationFolder="$(OutputPath)" Condition="!Exists('$(NativeDllPath)') And !Exists('$(NativeDllPathRelease)') And !Exists('$(NativeDllPath2)') And !Exists('$(NativeDllPath3)') And Exists('$(NativeDllPath4)')" SkipUnchangedFiles="true">
+			<Output TaskParameter="DestinationFiles" ItemName="FileWrites" />
+		</Copy>
+
+		<!-- Final fallback -->
+		<Copy SourceFiles="$(NativeDllPath5)" DestinationFolder="$(OutputPath)" Condition="!Exists('$(NativeDllPath)') And !Exists('$(NativeDllPathRelease)') And !Exists('$(NativeDllPath2)') And !Exists('$(NativeDllPath3)') And !Exists('$(NativeDllPath4)') And Exists('$(NativeDllPath5)')" SkipUnchangedFiles="true">
+			<Output TaskParameter="DestinationFiles" ItemName="FileWrites" />
+		</Copy>
+
+		<!-- Log the final result -->
+		<Message Text="✓ Native DLL successfully copied to: $(OutputPath)DisplayShaderHook.dll" Condition="Exists('$(OutputPath)DisplayShaderHook.dll')" Importance="high" />
+		<Warning Text="⚠ Native DLL not found in any expected location. Searched:&#xA;  1. $(NativeDllPath)&#xA;  2. $(NativeDllPathRelease)&#xA;  3. $(NativeDllPath2)&#xA;  4. $(NativeDllPath3)&#xA;&#xA;Application will run in ClearType fallback mode.&#xA;&#xA;To build the DLL:&#xA;  1. Open Native\DisplayShaderHook\DisplayShaderHook.vcxproj in Visual Studio&#xA;  2. Build in Release configuration (x64)&#xA;  3. Rebuild this C# project" Condition="!Exists('$(OutputPath)DisplayShaderHook.dll')" />
+	</Target>
+
+	<!-- Copy SubpixelMasks folder to output -->
+	<Target Name="CopySubpixelMasks" AfterTargets="Build">
+		<ItemGroup>
+			<MaskFiles Include="SubpixelMasks\**\*.*" />
+		</ItemGroup>
+		<Copy SourceFiles="@(MaskFiles)" DestinationFolder="$(OutputPath)SubpixelMasks\%(RecursiveDir)" SkipUnchangedFiles="true" />
+	</Target>
 
 </Project>

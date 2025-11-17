@@ -17,18 +17,25 @@ public partial class MainWindow : Window
     private DisplaySettings? _previewOriginalSettings;
     private System.Windows.Forms.NotifyIcon? _notifyIcon;
     private DispatcherTimer? _previewTimer;
+    private DispatcherTimer? _statusUpdateTimer;
     private const int PreviewDurationSeconds = 15;
     private bool _isDarkMode = false;
+    private bool _isInitializing = true;
 
     public MainWindow()
     {
         InitializeComponent();
+        
+        // Initialize diagnostic logging
+        Helpers.DiagnosticLogger.LogSystemInfo();
+        Helpers.DiagnosticLogger.Log("MainWindow", "Application starting...");
         
         _displayShaderService = new DisplayShaderService();
         _settingsService = new SettingsService();
         
         // Load saved settings
         _currentSettings = _settingsService.LoadSettings();
+        Helpers.DiagnosticLogger.LogConfigUpdate(_currentSettings);
         
         // Initialize UI with current settings
         InitializeUIFromSettings();
@@ -41,6 +48,46 @@ public partial class MainWindow : Window
         
         // Update preview text
         UpdatePreviewText();
+
+        _isInitializing = false;
+        
+        // Apply saved settings to restore previous state
+        // This will start monitoring if shader injection was enabled
+        ApplySettingsImmediate();
+
+        // Update status displays AFTER applying settings
+        UpdateAllStatusDisplays();
+        
+        // Start automatic status updates AFTER initial setup
+        StartAutomaticStatusUpdates();
+        
+        Helpers.DiagnosticLogger.Log("MainWindow", "Application initialized successfully");
+        Helpers.DiagnosticLogger.Log("MainWindow", $"Log file: {Helpers.DiagnosticLogger.GetLogFilePath()}");
+    }
+
+    /// <summary>
+    /// Start automatic status updates every second
+    /// </summary>
+    private void StartAutomaticStatusUpdates()
+    {
+        _statusUpdateTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+        
+        _statusUpdateTimer.Tick += (s, e) => UpdateAllStatusDisplays();
+        _statusUpdateTimer.Start();
+        
+        System.Diagnostics.Debug.WriteLine("[MainWindow] Started automatic status updates");
+    }
+
+    /// <summary>
+    /// Stop automatic status updates
+    /// </summary>
+    private void StopAutomaticStatusUpdates()
+    {
+        _statusUpdateTimer?.Stop();
+        _statusUpdateTimer = null;
     }
 
     private void ApplyTheme(bool isDark)
@@ -90,52 +137,90 @@ public partial class MainWindow : Window
 
     private void InitializeUIFromSettings()
     {
-        // Set subpixel layout radio buttons
-        switch (_currentSettings.SubpixelLayout)
+        // SHADER INJECTION SETTINGS
+        toggleShaderInjection.IsChecked = _currentSettings.EnableShaderInjection;
+        
+        switch (_currentSettings.ShaderLayout)
         {
             case SubpixelLayout.RgbStripe:
-                rbRgbStripe.IsChecked = true;
+                rbShaderRgbStripe.IsChecked = true;
                 break;
             case SubpixelLayout.WrgbStripe:
-                rbWrgbStripe.IsChecked = true;
+                rbShaderWrgbStripe.IsChecked = true;
                 break;
             case SubpixelLayout.RgbTriangular:
-                rbRgbTriangular.IsChecked = true;
+                rbShaderRgbTriangular.IsChecked = true;
                 break;
             case SubpixelLayout.Pentile:
-                rbPentile.IsChecked = true;
+                rbShaderPentile.IsChecked = true;
+                break;
+        }
+        
+        sliderShaderIntensity.Value = _currentSettings.ShaderIntensity;
+        shaderInjectionPanel.IsEnabled = _currentSettings.EnableShaderInjection;
+
+        // CLEARTYPE SETTINGS
+        toggleClearType.IsChecked = _currentSettings.EnableClearType;
+        
+        switch (_currentSettings.ClearTypeLayout)
+        {
+            case SubpixelLayout.RgbStripe:
+                rbClearTypeRgbStripe.IsChecked = true;
+                break;
+            case SubpixelLayout.WrgbStripe:
+                rbClearTypeWrgbStripe.IsChecked = true;
+                break;
+            case SubpixelLayout.RgbTriangular:
+                rbClearTypeRgbTriangular.IsChecked = true;
+                break;
+            case SubpixelLayout.Pentile:
+                rbClearTypePentile.IsChecked = true;
                 break;
             case SubpixelLayout.None:
-                rbNone.IsChecked = true;
+                rbClearTypeNone.IsChecked = true;
                 break;
         }
 
-        // Set shader settings
-        cbEnableShader.IsChecked = _currentSettings.EnableShader;
-        sliderIntensity.Value = _currentSettings.ShaderIntensity;
-        sliderIntensity.IsEnabled = _currentSettings.EnableShader;
+        sliderClearTypeIntensity.Value = _currentSettings.ClearTypeIntensity;
+        clearTypePanel.IsEnabled = _currentSettings.EnableClearType;
 
-        // Set application settings
+        // APPLICATION SETTINGS
         cbStartWithWindows.IsChecked = _currentSettings.StartWithWindows;
         cbMinimizeToTray.IsChecked = _currentSettings.MinimizeToTray;
     }
 
     private void UpdatePreviewText()
     {
-        string layoutName = _currentSettings.SubpixelLayout switch
-        {
-            SubpixelLayout.RgbStripe => "RGB Stripe",
-            SubpixelLayout.WrgbStripe => "WRGB Stripe",
-            SubpixelLayout.RgbTriangular => "RGB Triangular",
-            SubpixelLayout.Pentile => "PenTile",
-            SubpixelLayout.None => "None (ClearType Disabled)",
-            _ => "Unknown"
-        };
-
-        string enabledStatus = _currentSettings.EnableShader ? "Enabled" : "Disabled";
-        int intensityPercent = (int)(_currentSettings.ShaderIntensity * 100);
+        var modes = new List<string>();
         
-        runPreviewSettings.Text = $"{layoutName}, {enabledStatus}, Intensity: {intensityPercent}%";
+        if (_currentSettings.EnableShaderInjection)
+        {
+            string shaderLayout = _currentSettings.ShaderLayout switch
+            {
+                SubpixelLayout.RgbStripe => "RGB Stripe",
+                SubpixelLayout.WrgbStripe => "WRGB Stripe",
+                SubpixelLayout.RgbTriangular => "RGB Triangular",
+                SubpixelLayout.Pentile => "PenTile",
+                _ => "Unknown"
+            };
+            modes.Add($"Shader ({shaderLayout}, {_currentSettings.ShaderIntensity:P0})");
+        }
+        
+        if (_currentSettings.EnableClearType)
+        {
+            string clearTypeLayout = _currentSettings.ClearTypeLayout switch
+            {
+                SubpixelLayout.RgbStripe => "RGB Stripe",
+                SubpixelLayout.WrgbStripe => "WRGB Stripe",
+                SubpixelLayout.RgbTriangular => "RGB Triangular",
+                SubpixelLayout.Pentile => "PenTile",
+                SubpixelLayout.None => "Disabled",
+                _ => "Unknown"
+            };
+            modes.Add($"ClearType ({clearTypeLayout}, {_currentSettings.ClearTypeIntensity:P0})");
+        }
+        
+        runPreviewSettings.Text = modes.Count > 0 ? string.Join(" + ", modes) : "None";
     }
 
     private void SetupSystemTray()
@@ -191,53 +276,175 @@ public partial class MainWindow : Window
         System.Windows.Application.Current.Shutdown();
     }
 
-    private void SubpixelLayout_Changed(object sender, RoutedEventArgs e)
+    #region Shader Injection Event Handlers
+    
+    private void ShaderInjection_Changed(object sender, RoutedEventArgs e)
     {
-        if (_currentSettings == null) return;
+        if (_currentSettings == null || _isInitializing) return;
         
-        if (rbRgbStripe.IsChecked == true)
-            _currentSettings.SubpixelLayout = SubpixelLayout.RgbStripe;
-        else if (rbWrgbStripe.IsChecked == true)
-            _currentSettings.SubpixelLayout = SubpixelLayout.WrgbStripe;
-        else if (rbRgbTriangular.IsChecked == true)
-            _currentSettings.SubpixelLayout = SubpixelLayout.RgbTriangular;
-        else if (rbPentile.IsChecked == true)
-            _currentSettings.SubpixelLayout = SubpixelLayout.Pentile;
-        else if (rbNone.IsChecked == true)
-            _currentSettings.SubpixelLayout = SubpixelLayout.None;
+        _currentSettings.EnableShaderInjection = toggleShaderInjection.IsChecked == true;
+        shaderInjectionPanel.IsEnabled = _currentSettings.EnableShaderInjection;
+        
+        // Apply immediately
+        ApplySettingsImmediate();
         
         UpdatePreviewText();
+        UpdateAllStatusDisplays();
     }
 
-    private void EnableShader_Changed(object sender, RoutedEventArgs e)
+    private void ShaderLayout_Changed(object sender, RoutedEventArgs e)
     {
-        if (_currentSettings == null) return;
+        if (_currentSettings == null || _isInitializing) return;
         
-        _currentSettings.EnableShader = cbEnableShader.IsChecked == true;
-        sliderIntensity.IsEnabled = _currentSettings.EnableShader;
+        if (rbShaderRgbStripe.IsChecked == true)
+            _currentSettings.ShaderLayout = SubpixelLayout.RgbStripe;
+        else if (rbShaderWrgbStripe.IsChecked == true)
+            _currentSettings.ShaderLayout = SubpixelLayout.WrgbStripe;
+        else if (rbShaderRgbTriangular.IsChecked == true)
+            _currentSettings.ShaderLayout = SubpixelLayout.RgbTriangular;
+        else if (rbShaderPentile.IsChecked == true)
+            _currentSettings.ShaderLayout = SubpixelLayout.Pentile;
+        
+        Helpers.DiagnosticLogger.Log("UI", $"Shader layout changed to: {_currentSettings.ShaderLayout}");
+        
+        // Apply immediately
+        ApplySettingsImmediate();
+        
         UpdatePreviewText();
     }
 
     private void ShaderIntensity_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
-        if (_currentSettings == null) return;
+        if (_currentSettings == null || _isInitializing) return;
         
-        _currentSettings.ShaderIntensity = sliderIntensity.Value;
+        _currentSettings.ShaderIntensity = sliderShaderIntensity.Value;
+        
+        // Apply immediately
+        ApplySettingsImmediate();
+        
+        UpdatePreviewText();
+    }
+    
+    #endregion
+
+    #region ClearType Event Handlers
+    
+    private void ClearType_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettings == null || _isInitializing) return;
+        
+        _currentSettings.EnableClearType = toggleClearType.IsChecked == true;
+        clearTypePanel.IsEnabled = _currentSettings.EnableClearType;
+        
+        // Apply immediately
+        ApplySettingsImmediate();
+        
+        UpdatePreviewText();
+        UpdateAllStatusDisplays();
+    }
+
+    private void ClearTypeLayout_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_currentSettings == null || _isInitializing) return;
+        
+        if (rbClearTypeRgbStripe.IsChecked == true)
+            _currentSettings.ClearTypeLayout = SubpixelLayout.RgbStripe;
+        else if (rbClearTypeWrgbStripe.IsChecked == true)
+            _currentSettings.ClearTypeLayout = SubpixelLayout.WrgbStripe;
+        else if (rbClearTypeRgbTriangular.IsChecked == true)
+            _currentSettings.ClearTypeLayout = SubpixelLayout.RgbTriangular;
+        else if (rbClearTypePentile.IsChecked == true)
+            _currentSettings.ClearTypeLayout = SubpixelLayout.Pentile;
+        else if (rbClearTypeNone.IsChecked == true)
+            _currentSettings.ClearTypeLayout = SubpixelLayout.None;
+        
+        // Apply immediately
+        ApplySettingsImmediate();
+        
         UpdatePreviewText();
     }
 
+    private void ClearTypeIntensity_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_currentSettings == null || _isInitializing) return;
+        
+        _currentSettings.ClearTypeIntensity = sliderClearTypeIntensity.Value;
+        
+        // Apply immediately
+        ApplySettingsImmediate();
+        
+        UpdatePreviewText();
+    }
+    
+    #endregion
+
+    #region Application Settings Event Handlers
+    
     private void StartWithWindows_Changed(object sender, RoutedEventArgs e)
     {
-        if (_currentSettings == null) return;
+        if (_currentSettings == null || _isInitializing) return;
         
         _currentSettings.StartWithWindows = cbStartWithWindows.IsChecked == true;
+        
+        // Apply immediately
+        _settingsService.SetStartWithWindows(_currentSettings.StartWithWindows);
+        _settingsService.SaveSettings(_currentSettings);
     }
 
     private void MinimizeToTray_Changed(object sender, RoutedEventArgs e)
     {
-        if (_currentSettings == null) return;
+        if (_currentSettings == null || _isInitializing) return;
         
         _currentSettings.MinimizeToTray = cbMinimizeToTray.IsChecked == true;
+        
+        // Save immediately
+        _settingsService.SaveSettings(_currentSettings);
+    }
+    
+    #endregion
+
+    /// <summary>
+    /// Apply settings immediately without user confirmation
+    /// </summary>
+    private async void ApplySettingsImmediate()
+    {
+        try
+        {
+            // Show status during async operation
+            var wasEnabled = !_currentSettings.EnableShaderInjection;
+            
+            if (_currentSettings.EnableShaderInjection && wasEnabled)
+            {
+                // Enabling - show "Starting..." status
+                runShaderModeStatus.Text = "Starting monitoring...";
+                txtShaderProcessList.Text = "Initializing shader injection system...";
+            }
+            else if (!_currentSettings.EnableShaderInjection && !wasEnabled)
+            {
+                // Disabling - show "Stopping..." status
+                runShaderModeStatus.Text = "Stopping monitoring...";
+                txtShaderProcessList.Text = "Ejecting DLLs from hooked processes...";
+            }
+            
+            // Apply display shader settings (async to not block UI)
+            await Task.Run(() => _displayShaderService.ApplyShaderSettings(_currentSettings));
+
+            // Save settings
+            _settingsService.SaveSettings(_currentSettings);
+
+            // Update status immediately after completion
+            UpdateAllStatusDisplays();
+
+            System.Diagnostics.Debug.WriteLine("[MainWindow] Settings applied automatically");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] Error applying settings: {ex.Message}");
+            
+            // Show error in UI
+            runShaderModeStatus.Text = "Error";
+            txtShaderProcessList.Text = $"Error applying settings: {ex.Message}";
+        }
     }
 
     private void Preview_Click(object sender, RoutedEventArgs e)
@@ -258,40 +465,28 @@ public partial class MainWindow : Window
             // Apply preview settings
             _displayShaderService.ApplyShaderSettings(_currentSettings);
 
-            // Update UI to show preview is active
-            btnPreview.Content = $"⏱️ {PreviewDurationSeconds}s";
-            btnPreview.IsEnabled = false;
-            btnApply.IsEnabled = false;
+            // Show notification
+            System.Windows.MessageBox.Show(
+                $"Preview applied! Settings will revert automatically in {PreviewDurationSeconds} seconds.",
+                "Preview Active",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
 
             // Set up timer to revert changes
             int remainingSeconds = PreviewDurationSeconds;
             _previewTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(1)
+                Interval = TimeSpan.FromSeconds(PreviewDurationSeconds)
             };
             
             _previewTimer.Tick += (s, args) =>
             {
-                remainingSeconds--;
-                if (remainingSeconds <= 0)
-                {
-                    _previewTimer?.Stop();
-                    _previewTimer = null;
-                    RevertPreview();
-                }
-                else
-                {
-                    btnPreview.Content = $"⏱️ {remainingSeconds}s";
-                }
+                _previewTimer?.Stop();
+                _previewTimer = null;
+                RevertPreview();
             };
             
             _previewTimer.Start();
-
-            System.Windows.MessageBox.Show(
-                $"Preview applied! Settings will automatically revert in {PreviewDurationSeconds} seconds.\n\nLook at text in other applications to see the effect.",
-                "Preview Active",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -308,14 +503,17 @@ public partial class MainWindow : Window
     private void Reset_Click(object sender, RoutedEventArgs e)
     {
         var result = System.Windows.MessageBox.Show(
-            "This will restore Windows default ClearType settings.\n\n" +
-            "Default settings:\n" +
-            "• ClearType: Enabled\n" +
-            "• Subpixel Layout: RGB Stripe (Standard)\n" +
-            "• Contrast: 1400 (Standard)\n" +
-            "• Orientation: RGB\n\n" +
+            "This will restore default settings for both modes:\n\n" +
+            "Shader Injection:\n" +
+            "• Enabled\n" +
+            "• RGB Stripe layout\n" +
+            "• 100% intensity\n\n" +
+            "ClearType:\n" +
+            "• Enabled\n" +
+            "• RGB Stripe layout\n" +
+            "• 100% contrast\n\n" +
             "Do you want to continue?",
-            "Reset to Windows Defaults",
+            "Reset All Settings",
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
 
@@ -323,34 +521,35 @@ public partial class MainWindow : Window
         {
             try
             {
-                // Cancel any active preview
-                if (_previewTimer != null)
-                {
-                    _previewTimer.Stop();
-                    _previewTimer = null;
-                    _previewOriginalSettings = null;
-                    btnPreview.Content = "👁️ Preview";
-                    btnPreview.IsEnabled = true;
-                    btnApply.IsEnabled = true;
-                }
-
-                // Restore Windows defaults
+                // Restore defaults
                 _displayShaderService.RestoreWindowsDefaults();
 
-                // Update UI to reflect default settings
-                _currentSettings.EnableShader = true;
-                _currentSettings.SubpixelLayout = SubpixelLayout.RgbStripe;
+                // Reset to default settings
+                _isInitializing = true;
+                
+                _currentSettings.EnableShaderInjection = true;
+                _currentSettings.ShaderLayout = SubpixelLayout.RgbStripe;
                 _currentSettings.ShaderIntensity = 1.0;
+                
+                _currentSettings.EnableClearType = true;
+                _currentSettings.ClearTypeLayout = SubpixelLayout.RgbStripe;
+                _currentSettings.ClearTypeIntensity = 1.0;
                 
                 InitializeUIFromSettings();
                 UpdatePreviewText();
+                
+                _isInitializing = false;
+                
+                // Apply the defaults
+                ApplySettingsImmediate();
+                UpdateAllStatusDisplays();
 
                 // Save the default settings
                 _settingsService.SaveSettings(_currentSettings);
 
                 System.Windows.MessageBox.Show(
-                    "Windows default ClearType settings have been restored.\n\n" +
-                    "You may need to restart applications for text rendering changes to take full effect.",
+                    "Default settings have been restored and applied.\n\n" +
+                    "Monitoring is now active.",
                     "Reset Complete",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
@@ -384,52 +583,6 @@ public partial class MainWindow : Window
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
-        finally
-        {
-            btnPreview.Content = "👁️ Preview";
-            btnPreview.IsEnabled = true;
-            btnApply.IsEnabled = true;
-        }
-    }
-
-    private void Apply_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            // Cancel any active preview
-            if (_previewTimer != null)
-            {
-                _previewTimer.Stop();
-                _previewTimer = null;
-                _previewOriginalSettings = null;
-                btnPreview.Content = "👁️ Preview";
-                btnPreview.IsEnabled = true;
-                btnApply.IsEnabled = true;
-            }
-
-            // Apply display shader settings
-            _displayShaderService.ApplyShaderSettings(_currentSettings);
-
-            // Save settings
-            _settingsService.SaveSettings(_currentSettings);
-
-            // Set startup with Windows
-            _settingsService.SetStartWithWindows(_currentSettings.StartWithWindows);
-
-            System.Windows.MessageBox.Show(
-                "Settings applied successfully!\n\nYou may need to restart applications for text rendering changes to take full effect.",
-                "Success",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            System.Windows.MessageBox.Show(
-                $"Error applying settings:\n\n{ex.Message}",
-                "Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-        }
     }
 
     private void Close_Click(object sender, RoutedEventArgs e)
@@ -441,6 +594,38 @@ public partial class MainWindow : Window
         else
         {
             Close();
+        }
+    }
+
+    private void ViewLog_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Helpers.DiagnosticLogger.OpenLogFile();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Could not open log file:\n\n{ex.Message}\n\nLog location:\n{Helpers.DiagnosticLogger.GetLogFilePath()}",
+                "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private void OpenLogFolder_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Helpers.DiagnosticLogger.OpenLogDirectory();
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"Could not open log folder:\n\n{ex.Message}",
+                "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 
@@ -480,8 +665,96 @@ public partial class MainWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _previewTimer?.Stop();
+        _statusUpdateTimer?.Stop();
         _notifyIcon?.Dispose();
         _notifyIcon = null;
+        _displayShaderService?.Dispose();
         base.OnClosed(e);
+    }
+
+    private void UpdateAllStatusDisplays()
+    {
+        UpdateShaderInjectionStatus();
+        UpdateClearTypeStatus();
+    }
+
+    private void UpdateShaderInjectionStatus()
+    {
+        bool dllAvailable = _displayShaderService.IsShaderModeAvailable();
+        bool enabled = _currentSettings.EnableShaderInjection;
+        
+        if (!dllAvailable)
+        {
+            // DLL not available
+            statusShaderBadge.Visibility = Visibility.Collapsed;
+            runShaderModeStatus.Text = "DLL not found - install DisplayShaderHook.dll";
+            txtShaderProcessList.Text = "Shader injection requires the native DLL to be built and placed in the application directory.";
+            return;
+        }
+        
+        statusShaderBadge.Visibility = Visibility.Visible;
+        
+        if (!enabled)
+        {
+            // Disabled
+            runShaderStatus.Text = "Disabled";
+            statusShaderBadge.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(245, 245, 245));
+            statusShaderBadge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(189, 189, 189));
+            runShaderModeStatus.Text = "Disabled";
+            txtShaderProcessList.Text = "Enable shader injection to automatically hook into ALL GUI applications";
+            return;
+        }
+        
+        int injectedCount = _displayShaderService.GetInjectedProcessCount();
+        
+        if (injectedCount > 0)
+        {
+            // Active and injecting
+            runShaderStatus.Text = $"Active ({injectedCount})";
+            statusShaderBadge.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(232, 245, 233));
+            statusShaderBadge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(76, 175, 80));
+            runShaderModeStatus.Text = $"Monitoring ALL processes - {injectedCount} hooked";
+            
+            var processNames = _displayShaderService.GetInjectedProcessNames();
+            if (processNames.Count <= 10)
+            {
+                txtShaderProcessList.Text = "Hooked processes:\n  • " + string.Join("\n  • ", processNames);
+            }
+            else
+            {
+                txtShaderProcessList.Text = "Hooked processes (top 10):\n  • " + 
+                    string.Join("\n  • ", processNames.Take(10)) + 
+                    $"\n  ... and {processNames.Count - 10} more";
+            }
+        }
+        else
+        {
+            // Ready but not injecting yet
+            runShaderStatus.Text = "Monitoring";
+            statusShaderBadge.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 243, 224));
+            statusShaderBadge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 152, 0));
+            
+            int version = ShaderService.GetHookVersion();
+            runShaderModeStatus.Text = version > 0 ? $"Monitoring ALL GUI processes (v{version})" : "Monitoring ALL GUI processes";
+            txtShaderProcessList.Text = "Continuous monitoring active - will automatically inject into any GUI application.\nWaiting for GUI processes to start...";
+        }
+    }
+
+    private void UpdateClearTypeStatus()
+    {
+        bool enabled = _currentSettings.EnableClearType;
+        
+        if (enabled)
+        {
+            runClearTypeStatus.Text = "Enabled";
+            statusClearTypeBadge.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(227, 242, 253));
+            statusClearTypeBadge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(33, 150, 243));
+        }
+        else
+        {
+            runClearTypeStatus.Text = "Disabled";
+            statusClearTypeBadge.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(245, 245, 245));
+            statusClearTypeBadge.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(189, 189, 189));
+        }
     }
 }
