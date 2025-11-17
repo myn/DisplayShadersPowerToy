@@ -1,6 +1,8 @@
 # Display Shaders PowerToy
 
-A Windows utility that improves text rendering for OLED displays with non-standard subpixel layouts (WOLED/WRGB stripe and QD-OLED/RGB triangular).
+?? **Important Notice**: This tool is currently a **ClearType settings helper** with OLED-optimized presets. It does NOT implement actual display shaders. See [Technical Limitations](docs/TECHNICAL_LIMITATIONS.md) for full details.
+
+A Windows utility that provides optimized ClearType presets for OLED displays with non-standard subpixel layouts (WOLED/WRGB stripe and QD-OLED/RGB triangular).
 
 ## Problem Statement
 
@@ -11,22 +13,24 @@ This application addresses [PowerToys Issue #25595](https://github.com/microsoft
 - Windows ClearType is optimized for standard RGB stripe LCD displays
 - Using standard ClearType on OLED displays causes chromatic aberration and color fringing on text edges
 
+**Current Limitations**: Due to Windows ClearType API limitations, this tool cannot fully solve the subpixel geometry issues. It provides **workarounds** by adjusting contrast and gamma settings. A proper solution requires actual display shaders (not yet implemented).
+
 ## Screenshot
 
 ![Display Shaders PowerToy Interface](Screenshot%202025-11-15%20221459.png)
 
 ## Features
 
-- **Subpixel Layout Support**:
+- **ClearType Presets for Different Displays**:
   - RGB Stripe (Standard LCD) - Default ClearType
-  - WRGB Stripe (WOLED - LG OLED) - Optimized for white subpixel layouts
-  - RGB Triangular (QD-OLED - Samsung) - Optimized for triangular arrangements
-  - PenTile (Some AMOLED displays) - Optimized for pentile layouts
-  - None (Disable ClearType) - Turn off subpixel rendering completely
+  - WRGB Stripe (WOLED - LG OLED) - Reduced contrast workaround
+  - RGB Triangular (QD-OLED - Samsung) - Conservative settings
+  - PenTile (Some AMOLED displays) - Balanced settings  
+  - None (Disable ClearType) - Grayscale anti-aliasing only
 
-- **Shader Controls**:
-  - Enable/disable display shader
-  - Adjustable shader intensity (0-100%)
+- **Adjustable Settings**:
+  - Enable/disable ClearType
+  - Adjustable intensity (0-100%)
 
 - **Application Settings**:
   - Start with Windows
@@ -35,12 +39,23 @@ This application addresses [PowerToys Issue #25595](https://github.com/microsoft
 
 ## How It Works
 
-The application modifies Windows ClearType settings and registry values to optimize text rendering for different subpixel layouts:
+?? **Reality Check**: This application **only modifies Windows ClearType registry settings**. It does NOT use actual shaders.
+
+The application modifies these settings:
 
 1. **Standard RGB Stripe**: Uses default ClearType settings optimized for LCD displays
-2. **WOLED WRGB Stripe**: Reduces ClearType contrast to minimize color fringing caused by the white subpixel
-3. **QD-OLED RGB Triangular**: Uses conservative settings to account for the triangular subpixel arrangement
-4. **PenTile**: Balances settings for the diamond-shaped subpixel pattern
+2. **WOLED WRGB Stripe**: Reduces ClearType contrast (600-800 instead of 1400) - This is a **workaround** that slightly reduces fringing but doesn't truly fix the WRGB geometry issue
+3. **QD-OLED RGB Triangular**: Uses very conservative settings (600-700 contrast) - This **cannot fix vertical fringing** caused by triangular layout
+4. **PenTile**: Balanced settings - Limited effectiveness
+
+### What This Tool CANNOT Do
+
+- ? Cannot implement true RBG orientation for WOLED (Windows doesn't support it)
+- ? Cannot fix vertical subpixel fringing on QD-OLED (ClearType only handles horizontal)
+- ? Cannot use custom subpixel masks (API limitation)
+- ? Does not use actual DirectX/OpenGL shaders
+
+For technical details, see [Technical Limitations](docs/TECHNICAL_LIMITATIONS.md).
 
 ## System Requirements
 

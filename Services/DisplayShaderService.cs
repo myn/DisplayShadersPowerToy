@@ -5,7 +5,18 @@ using DisplayShadersPowerToy.Models;
 namespace DisplayShadersPowerToy.Services;
 
 /// <summary>
-/// Service for managing display shaders and ClearType settings
+/// Service for managing ClearType settings
+/// 
+/// IMPORTANT: This service does NOT implement actual display shaders.
+/// It only modifies Windows ClearType registry settings to provide
+/// workarounds for OLED displays. Due to Windows API limitations:
+/// 
+/// - Cannot implement RBG orientation for WOLED (only RGB/BGR supported)
+/// - Cannot fix vertical fringing on QD-OLED (ClearType is horizontal-only)
+/// - Cannot use custom subpixel masks
+/// - Only adjusts contrast/gamma values
+/// 
+/// See docs/TECHNICAL_LIMITATIONS.md for details.
 /// </summary>
 public class DisplayShaderService
 {
@@ -72,12 +83,16 @@ public class DisplayShaderService
 
     /// <summary>
     /// Apply settings for WOLED WRGB stripe displays
+    /// 
+    /// LIMITATION: This is a workaround, not a real fix. Windows ClearType
+    /// does not support RBG orientation (where Blue is in the middle).
+    /// We can only reduce contrast to minimize color fringing.
+    /// A proper fix would require actual display shaders.
     /// </summary>
     private void ApplyWrgbStripeSettings(DisplaySettings settings)
     {
         SetClearTypeEnabled(true);
-        // For WRGB, we need to reduce ClearType aggressiveness
-        SetClearTypeOrientation(1); // Still RGB orientation
+        SetClearTypeOrientation(1); // Still RGB orientation (limitation: no RBG mode exists)
         SetClearTypeContrast((uint)(800 * settings.ShaderIntensity)); // Lower contrast to reduce color fringing
         
         // Additional registry settings for WOLED
@@ -90,6 +105,11 @@ public class DisplayShaderService
 
     /// <summary>
     /// Apply settings for QD-OLED RGB triangular displays
+    /// 
+    /// LIMITATION: This cannot fix the vertical green/purple fringing problem.
+    /// Windows ClearType only handles horizontal subpixel arrangements.
+    /// Triangular layouts with green on top and red/blue on bottom require
+    /// actual display shaders to fix properly.
     /// </summary>
     private void ApplyRgbTriangularSettings(DisplaySettings settings)
     {

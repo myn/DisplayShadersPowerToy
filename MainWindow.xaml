@@ -287,7 +287,7 @@
                                   Checked="EnableShader_Changed"
                                   Unchecked="EnableShader_Changed"/>
 
-                        <TextBlock Text="Optimization Intensity:" 
+                        <TextBlock Text="Contrast Adjustment:" 
                                   Margin="0,10,0,6"
                                   Foreground="{DynamicResource CardForeground}"/>
                         <Grid>
@@ -315,6 +315,21 @@
                                            Foreground="{DynamicResource CardForeground}"/>
                             </Border>
                         </Grid>
+                        
+                        <!-- Disclaimer -->
+                        <Border BorderBrush="{DynamicResource CardBorder}"
+                                Background="#FFF9E6"
+                                BorderThickness="1" 
+                                Padding="10" 
+                                CornerRadius="4"
+                                Margin="0,12,0,0">
+                            <TextBlock TextWrapping="Wrap" 
+                                       FontSize="10"
+                                       Foreground="#856404">
+                                <Run Text="⚠️ Note: " FontWeight="Bold"/>
+                                <Run Text="This tool adjusts ClearType settings only. It cannot fully fix OLED subpixel fringing due to Windows API limitations."/>
+                            </TextBlock>
+                        </Border>
                     </StackPanel>
                 </GroupBox>
 
