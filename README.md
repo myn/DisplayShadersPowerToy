@@ -33,7 +33,7 @@ This application provides **two optimization methods** that work together:
 - **Safe and reversible** - Clean unhooking on exit
 
 ### Display Support
-- **Standard LCD/LED** - Traditional RGB stripe
+- **Standard LCD/LED/JOLED** - Traditional RGB stripe (includes JOLED displays)
 - **LG WOLED (WRGB)** - LG C/G/B series OLED displays
 - **QD-OLED (RGB Triangular)** - Samsung/Alienware monitors
 - **PenTile AMOLED** - Diamond pattern displays
@@ -70,7 +70,8 @@ The interface shows real-time status and easy configuration:
 1. **Select your display type:**
    - LG OLED monitor? **LG WOLED (WRGB)**
    - Samsung QD-OLED? **QD-OLED (RGB Triangular)**
-   - Standard LCD? **Standard LCD / LED Monitor**
+   - JOLED monitor? **Standard LCD / LED / JOLED Monitor**
+   - Standard LCD? **Standard LCD / LED / JOLED Monitor**
 
 2. **Adjust optimization strength** (100% recommended to start)
 
@@ -87,7 +88,8 @@ The interface shows real-time status and easy configuration:
 |-------------|---------|-----------|
 | **LG WOLED** | LG WOLED (WRGB) | 85-100% |
 | **Samsung QD-OLED** | QD-OLED (RGB Triangular) | 75-90% |
-| **Standard LCD** | Standard LCD / LED | 100% |
+| **JOLED** | Standard LCD / LED / JOLED | 100% |
+| **Standard LCD** | Standard LCD / LED / JOLED | 100% |
 
 ## How It Works
 

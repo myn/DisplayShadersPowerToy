@@ -191,8 +191,8 @@
                                         Margin="0,0,0,10">
                                 <RadioButton.Content>
                                     <StackPanel>
-                                        <TextBlock Text="Standard LCD / LED Monitor" FontWeight="SemiBold" FontSize="13"/>
-                                        <TextBlock Text="Traditional RGB stripe layout" 
+                                        <TextBlock Text="Standard LCD / LED / JOLED Monitor" FontWeight="SemiBold" FontSize="13"/>
+                                        <TextBlock Text="Traditional RGB stripe layout (includes JOLED displays)" 
                                                   FontSize="11" 
                                                   Foreground="{StaticResource TextSecondary}"
                                                   Margin="0,2,0,0"/>
