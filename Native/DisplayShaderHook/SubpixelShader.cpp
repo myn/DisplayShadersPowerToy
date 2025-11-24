@@ -79,8 +79,11 @@ namespace DisplayShader {
         // Standard RGB stripe
         float3 ApplyRgbStripe(float3 originalRGB, float2 screenPos)
         {
-            float3 mask = GetSubpixelMask(screenPos);
-            return originalRGB * mask;
+            // Fix for Issue #3: Standard LCD/LED fonts appear rough and jagged
+            // Windows ClearType is already optimized for RGB stripe.
+            // Applying a hard subpixel mask interferes with ClearType's subpixel rendering,
+            // causing information loss and aliasing. We should pass through the original.
+            return originalRGB;
         }
         
         // Pentile diamond pattern
