@@ -82,6 +82,7 @@ public partial class MainWindow : Window
         // Set toggles
         toggleQuickEnable.IsChecked = _currentSettings.EnableShaderInjection;
         toggleAutoInject.IsChecked = _currentSettings.EnableShaderInjection;
+        UpdateToggleStatusDisplay();
         cbStartWithWindows.IsChecked = _currentSettings.StartWithWindows;
         cbMinimizeToTray.IsChecked = _currentSettings.MinimizeToTray;
 
@@ -205,6 +206,20 @@ public partial class MainWindow : Window
         txtIntensityValue.Text = $"{sliderIntensity.Value:P0}";
     }
 
+    private void UpdateToggleStatusDisplay()
+    {
+        if (toggleQuickEnable.IsChecked == true)
+        {
+            txtToggleStatus.Text = "ENABLED";
+            txtToggleStatus.Foreground = (System.Windows.Media.Brush)FindResource("Success");
+        }
+        else
+        {
+            txtToggleStatus.Text = "DISABLED";
+            txtToggleStatus.Foreground = (System.Windows.Media.Brush)FindResource("TextSecondary");
+        }
+    }
+
     // Event Handlers
     private void QuickEnable_Changed(object sender, RoutedEventArgs e)
     {
@@ -212,6 +227,7 @@ public partial class MainWindow : Window
 
         _currentSettings.EnableShaderInjection = toggleQuickEnable.IsChecked == true;
         toggleAutoInject.IsChecked = _currentSettings.EnableShaderInjection;
+        UpdateToggleStatusDisplay();
         
         Helpers.DiagnosticLogger.Log("UI", $"Quick enable toggled: {_currentSettings.EnableShaderInjection}");
         ApplySettings();
@@ -251,6 +267,7 @@ public partial class MainWindow : Window
 
         _currentSettings.EnableShaderInjection = toggleAutoInject.IsChecked == true;
         toggleQuickEnable.IsChecked = _currentSettings.EnableShaderInjection;
+        UpdateToggleStatusDisplay();
         
         Helpers.DiagnosticLogger.Log("UI", $"Auto-inject toggled: {_currentSettings.EnableShaderInjection}");
         ApplySettings();

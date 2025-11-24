@@ -153,6 +153,9 @@ public class DisplayShaderService : IDisposable
         }
         else
         {
+            // Update config to disabled state first so any currently hooked apps stop processing
+            _shaderService.UpdateShaderConfig(settings);
+
             // Stop monitoring if shader injection disabled
             _injectionManager.StopContinuousMonitoring();
             System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Shader injection disabled, stopped monitoring");

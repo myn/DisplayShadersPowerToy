@@ -159,7 +159,8 @@
                                          IsChecked="True"
                                          Checked="QuickEnable_Changed"
                                          Unchecked="QuickEnable_Changed"/>
-                            <TextBlock Text="ENABLED" 
+                            <TextBlock x:Name="txtToggleStatus"
+                                       Text="ENABLED" 
                                        FontSize="10" 
                                        FontWeight="SemiBold"
                                        Foreground="{StaticResource Success}"
