@@ -98,16 +98,26 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     case DLL_PROCESS_DETACH:
         // Stop config watcher if running
         g_running.store(false, std::memory_order_release);
+        
+        // Signal ConfigLoader to stop watching BEFORE joining
+        // This ensures the watcher thread exits its loop
+        if (g_initialized.load(std::memory_order_acquire)) {
+            try {
+                ConfigLoader::Instance().Shutdown();
+            }
+            catch (...) {}
+        }
+
         if (g_configWatcherThread.joinable()) {
             g_configWatcherThread.join();
         }
 
-        // Shutdown components if initialized
+        // Shutdown other components
         if (g_initialized.load(std::memory_order_acquire)) {
             try {
                 DirectWriteHook::Instance().Shutdown();
                 SubpixelShader::Instance().Shutdown();
-                ConfigLoader::Instance().Shutdown();
+                // ConfigLoader::Instance().Shutdown(); // Already called
             }
             catch (...) {
                 // Ignore exceptions during shutdown
