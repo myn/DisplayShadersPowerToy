@@ -142,13 +142,6 @@ public partial class MainWindow : Window
     {
         Helpers.DiagnosticLogger.Log("MainWindow", "Applying settings...");
         
-        // Sync shader and ClearType layouts
-        _currentSettings.ClearTypeLayout = _currentSettings.ShaderLayout;
-        _currentSettings.ClearTypeIntensity = _currentSettings.ShaderIntensity;
-        
-        // Enable ClearType as fallback
-        _currentSettings.EnableClearType = true;
-        
         // Apply via service
         _displayShaderService.ApplyShaderSettings(_currentSettings);
         

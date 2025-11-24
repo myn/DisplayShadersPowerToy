@@ -100,9 +100,6 @@ public static class DiagnosticLogger
         Log("Config", $"Shader Injection: {settings.EnableShaderInjection}");
         Log("Config", $"Shader Layout: {settings.ShaderLayout}");
         Log("Config", $"Shader Intensity: {settings.ShaderIntensity:F2}");
-        Log("Config", $"ClearType: {settings.EnableClearType}");
-        Log("Config", $"ClearType Layout: {settings.ClearTypeLayout}");
-        Log("Config", $"ClearType Intensity: {settings.ClearTypeIntensity:F2}");
         Log("Config", "============================");
     }
 
