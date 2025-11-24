@@ -1,23 +1,30 @@
-# Developer Guide - Display Shaders PowerToy
+# Developer Guide - OLED Text Optimizer
 
 ## Project Overview
 
-Display Shaders PowerToy is a .NET 8 WPF application that addresses text rendering issues on OLED displays with non-standard subpixel layouts.
+OLED Text Optimizer is a .NET 8 WPF application that fixes text rendering issues on OLED displays using real-time DirectWrite shader injection.
 
 ### Architecture
 
 ```
 DisplayShadersPowerToy/
-??? Models/
-?   ??? DisplaySettings.cs      # Settings data model
-?   ??? SubpixelLayout.cs       # Enum for subpixel types
-??? Services/
-?   ??? DisplayShaderService.cs # Core ClearType manipulation
-?   ??? SettingsService.cs      # Settings persistence
-??? MainWindow.xaml             # Main UI
-??? MainWindow.xaml.cs          # Main UI logic
-??? App.xaml                    # Application definition
-??? App.xaml.cs                 # Application startup logic
+?? Models/
+?  ?? DisplaySettings.cs      # Settings data model
+?  ?? SubpixelLayout.cs       # Enum for subpixel types
+?? Services/
+?  ?? DisplayShaderService.cs # Shader injection management
+?  ?? ShaderService.cs        # Shader configuration
+?  ?? InjectionManager.cs     # Process injection
+?  ?? SettingsService.cs      # Settings persistence
+?? Native/DisplayShaderHook/  # C++ Hook DLL
+?  ?? dllmain.cpp            # DLL entry point
+?  ?? DirectWriteHook.cpp    # DirectWrite API hooks
+?  ?? SubpixelShader.cpp     # HLSL shader implementation
+?  ?? ConfigLoader.cpp       # Configuration loading
+?? MainWindow.xaml           # Main UI
+?? MainWindow.xaml.cs        # Main UI logic
+?? App.xaml                  # Application definition
+?? App.xaml.cs               # Application startup logic
 ```
 
 ## Building the Project
@@ -25,8 +32,8 @@ DisplayShadersPowerToy/
 ### Prerequisites
 
 - .NET 8.0 SDK or later
-- Visual Studio 2022 or VS Code
-- Windows 10/11
+- Visual Studio 2022 (with C++ and .NET workloads)
+- Windows 10/11 SDK
 
 ### Build Commands
 
@@ -34,10 +41,10 @@ DisplayShadersPowerToy/
 # Restore dependencies
 dotnet restore
 
-# Build in Debug mode
-dotnet build
+# Build C++ hook DLL
+msbuild Native\DisplayShaderHook\DisplayShaderHook.vcxproj /p:Configuration=Release
 
-# Build in Release mode
+# Build C# application
 dotnet build -c Release
 
 # Run the application
@@ -49,8 +56,13 @@ dotnet publish -c Release -r win-x64 --self-contained
 
 ### Dependencies
 
+**C# Application:**
 - **Hardcodet.NotifyIcon.Wpf** (2.0.1) - System tray icon support
-- **.NET 8.0 Windows Desktop Runtime** - WPF and Windows Forms support
+- **.NET 8.0 Windows Desktop Runtime** - WPF support
+
+**C++ Hook DLL:**
+- **MinHook** - API hooking library
+- **Windows SDK** - DirectWrite and D3D11 headers
 
 ## Code Structure
 
@@ -61,11 +73,11 @@ Stores user preferences:
 ```csharp
 public class DisplaySettings
 {
-    public SubpixelLayout SubpixelLayout { get; set; }
-    public bool EnableShader { get; set; }
-    public double ShaderIntensity { get; set; }
-    public bool StartWithWindows { get; set; }
-    public bool MinimizeToTray { get; set; }
+    public bool EnableShaderInjection { get; set; } = true;
+    public SubpixelLayout ShaderLayout { get; set; } = SubpixelLayout.RgbStripe;
+    public double ShaderIntensity { get; set; } = 1.0;
+    public bool StartWithWindows { get; set; } = false;
+    public bool MinimizeToTray { get; set; } = false;
 }
 ```
 
@@ -77,124 +89,163 @@ public enum SubpixelLayout
     RgbStripe,      // Standard LCD
     WrgbStripe,     // WOLED
     RgbTriangular,  // QD-OLED
-    Pentile,        // AMOLED
-    None            // Disabled
+    Pentile         // AMOLED
 }
 ```
 
 ### Services
 
 #### DisplayShaderService.cs
-**Purpose:** Manages Windows ClearType settings
+**Purpose:** Manages shader injection lifecycle
 
 **Key Methods:**
-- `ApplyShaderSettings(DisplaySettings)` - Apply settings to Windows
-- `ApplyRgbStripeSettings()` - Standard LCD settings
-- `ApplyWrgbStripeSettings()` - WOLED optimizations
-- `ApplyRgbTriangularSettings()` - QD-OLED optimizations
-- `ApplyPentileSettings()` - PenTile optimizations
-- `DisableClearType()` - Turn off ClearType
+- `ApplyShaderSettings(DisplaySettings)` - Apply shader configuration
+- `EnableShaderInjection()` - Start injection
+- `GetInjectedProcessCount()` - Count hooked processes
+- `GetInjectedProcessNames()` - List hooked processes
+- `IsShaderModeAvailable()` - Check if DLL is available
 
-**Windows APIs Used:**
-- `SystemParametersInfo` - Apply system-wide font settings
-- Registry keys in `HKCU\Control Panel\Desktop`
+**Shader Pipeline:**
+```
+DisplayShaderService
+    ?
+ShaderService (config management)
+    ?
+InjectionManager (process hooking)
+    ?
+DisplayShaderHook.dll (DirectWrite hooks)
+    ?
+Custom HLSL Shaders
+```
 
-**ClearType Parameters:**
-| Parameter | RGB Stripe | WRGB Stripe | RGB Triangular | PenTile |
-|-----------|------------|-------------|----------------|---------|
-| Contrast  | 1400       | 800         | 600            | 700     |
-| Gamma     | Default    | 1200        | 1000           | 1100    |
-| Orientation | RGB (1)  | RGB (1)     | RGB (1)        | RGB (1) |
-
-#### SettingsService.cs
-**Purpose:** Persist user settings in Windows Registry
+#### InjectionManager.cs
+**Purpose:** Inject DLL into GUI processes
 
 **Key Methods:**
-- `SaveSettings(DisplaySettings)` - Save to registry
-- `LoadSettings()` - Load from registry
-- `SetStartWithWindows(bool)` - Manage startup
-- `IsStartWithWindowsEnabled()` - Check startup status
+- `StartContinuousMonitoring()` - Auto-inject into new processes
+- `StopContinuousMonitoring()` - Stop monitoring
+- `InjectIntoProcesses()` - Inject into all eligible processes
+- `GetInjectedProcessCount()` - Count injected processes
 
-**Registry Locations:**
-- Settings: `HKCU\SOFTWARE\DisplayShadersPowerToy`
-- Startup: `HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run`
+**Process Filtering:**
+- Only injects into GUI applications (MainWindowHandle != 0)
+- Blacklists system processes, security software, anti-cheat
+- Skips Session 0 processes (system services)
+
+#### ShaderService.cs
+**Purpose:** Manage shader configuration via shared memory
+
+**Key Methods:**
+- `Initialize()` - Create shared memory
+- `UpdateShaderConfig(DisplaySettings)` - Write configuration
+- `ReadCurrentConfig()` - Read configuration
+- `IsHookDllAvailable()` - Check if DLL exists
+
+**Shared Memory:**
+- Named: "DisplayShadersConfig"
+- Size: 256 bytes
+- Contains: Layout type, intensity, enabled flag
 
 ### UI Components
 
 #### MainWindow.xaml
 **Sections:**
 1. Header - Title and description
-2. Subpixel Layout - Radio buttons for selection
-3. Shader Settings - Enable toggle and intensity slider
-4. Application Settings - Startup and tray options
-5. Action Buttons - Apply and Close
+2. Status Card - Live process count and enable toggle
+3. Display Configuration - Radio buttons for layout selection
+4. Intensity Slider - Adjustable optimization strength
+5. Advanced Options - Startup and tray settings
+6. Diagnostic Tools - Log viewing
+7. Active Processes - List of optimized applications
 
-**Key UI Elements:**
-- Radio buttons for mutually exclusive layout selection
-- Slider with percentage display for intensity
-- Checkboxes for boolean settings
-- Styled GroupBox containers
+**Modern Design:**
+- Card-based layout
+- Toggle switches
+- Real-time status updates
+- Green/gray color scheme
 
 #### MainWindow.xaml.cs
 **Event Handlers:**
-- `SubpixelLayout_Changed` - Update settings when layout selected
-- `EnableShader_Changed` - Toggle shader on/off
-- `ShaderIntensity_Changed` - Update intensity value
-- `Apply_Click` - Save and apply all settings
+- `DisplayType_Changed` - Update shader layout
+- `Intensity_Changed` - Update shader intensity
+- `QuickEnable_Changed` - Toggle shader injection
+- `AutoInject_Changed` - Toggle auto-injection
 - `Window_Closing` - Handle minimize to tray
 - `Window_StateChanged` - Hide when minimized
 
-**System Tray:**
-- NotifyIcon with context menu
-- Double-click to restore window
-- Right-click menu for Open/Exit
+**Status Updates:**
+- Timer updates every 2 seconds
+- Shows process count
+- Displays active/waiting/disabled state
 
-## Windows API Integration
+## Native Hook DLL
 
-### SystemParametersInfo
+### DirectWrite Hooking
 
-Used to modify system-wide font rendering:
-
-```csharp
-[DllImport("user32.dll", SetLastError = true)]
-private static extern bool SystemParametersInfo(
-    uint uiAction,    // Action to perform
-    uint uiParam,     // Parameter
-    IntPtr pvParam,   // Additional data
-    uint fWinIni      // Update flags
-);
+**dllmain.cpp:**
+```cpp
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID reserved)
+{
+    if (reason == DLL_PROCESS_ATTACH)
+    {
+        DisableThreadLibraryCalls(hModule);
+        if (!InitializeHooks())
+        {
+            return FALSE;
+        }
+    }
+    else if (reason == DLL_PROCESS_DETACH)
+    {
+        ShutdownHooks();
+    }
+    return TRUE;
+}
 ```
 
-**Actions Used:**
-- `SPI_SETFONTSMOOTHING` (0x004B) - Enable/disable ClearType
-- `SPI_SETFONTSMOOTHINGTYPE` (0x200B) - Set anti-aliasing type
-- `SPI_SETFONTSMOOTHINGORIENTATION` (0x2013) - RGB vs BGR
-- `SPI_SETFONTSMOOTHINGCONTRAST` (0x200D) - Contrast level
+**DirectWriteHook.cpp:**
+- Hooks `IDWriteTextRenderer::DrawGlyphRun`
+- Applies custom pixel shader
+- Reads layout from shared memory
+- Adjusts RGB values based on subpixel type
 
-**Flags:**
-- `SPIF_UPDATEINIFILE` (0x01) - Write to registry
-- `SPIF_SENDCHANGE` (0x02) - Broadcast WM_SETTINGCHANGE
+### HLSL Shaders
 
-### Registry Keys
+**SubpixelShader.cpp:**
+```cpp
+// Shader for WOLED (WRGB Stripe)
+float4 ApplyWOLEDShader(float4 color, float2 texCoord)
+{
+    // Remap RGB to RBG (Blue in middle for WRGB)
+    float r = color.r;
+    float g = color.g;
+    float b = color.b;
+    
+    // Apply subpixel-aware rendering
+    return float4(r, b, g, color.a);
+}
+```
 
-**ClearType Settings:**
+**Supported Shaders:**
+- RGB Stripe (standard)
+- WRGB Stripe (WOLED)
+- RGB Triangular (QD-OLED)
+- PenTile (AMOLED)
+
+## Registry Integration
+
+### Application Settings Only
+
+The app stores settings in:
 ```
-HKCU\Control Panel\Desktop\
-??? FontSmoothing (String)          "0" | "2"
-??? FontSmoothingType (DWORD)       0 | 2
-??? FontSmoothingOrientation (DWORD) 0 | 1
-??? FontSmoothingGamma (DWORD)      800-1400
+HKEY_CURRENT_USER\SOFTWARE\DisplayShadersPowerToy\
+?? EnableShaderInjection (DWORD) 0 | 1
+?? ShaderLayout (DWORD)           0-3
+?? ShaderIntensity (String)       0.0-1.0
+?? StartWithWindows (DWORD)       0 | 1
+?? MinimizeToTray (DWORD)         0 | 1
 ```
 
-**Application Settings:**
-```
-HKCU\SOFTWARE\DisplayShadersPowerToy\
-??? SubpixelLayout (DWORD)    0-4
-??? EnableShader (DWORD)      0 | 1
-??? ShaderIntensity (String)  0.0-1.0
-??? StartWithWindows (DWORD)  0 | 1
-??? MinimizeToTray (DWORD)    0 | 1
-```
+**Note:** This app does NOT modify Windows font rendering settings or ClearType registry keys.
 
 ## Contributing
 
@@ -202,20 +253,25 @@ HKCU\SOFTWARE\DisplayShadersPowerToy\
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/DisplayShadersPowerToy.git
+git clone https://github.com/myn/DisplayShadersPowerToy.git
 cd DisplayShadersPowerToy
 ```
 
 2. **Open in Visual Studio 2022**
 - File ? Open ? Project/Solution
-- Select `DisplayShadersPowerToy.csproj`
+- Select `DisplayShadersPowerToy.sln`
 
-3. **Restore NuGet packages**
+3. **Build C++ Hook DLL first**
 ```bash
-dotnet restore
+msbuild Native\DisplayShaderHook\DisplayShaderHook.vcxproj /p:Configuration=Release
 ```
 
-4. **Build and run**
+4. **Build C# application**
+```bash
+dotnet build -c Release
+```
+
+5. **Run**
 - Press F5 to debug
 - Or `dotnet run` from command line
 
@@ -228,23 +284,17 @@ dotnet restore
 - Add XML documentation comments for public APIs
 - Keep methods focused and single-purpose
 
+**C++ Conventions:**
+- Use PascalCase for classes and functions
+- Use camelCase for variables
+- Use RAII for resource management
+- Check return values from API calls
+
 **XAML Conventions:**
-- Use x:Name for controls that are accessed in code-behind
-- Group related UI elements in GroupBox
+- Use x:Name for controls accessed in code-behind
+- Group related UI elements in cards/borders
 - Use consistent spacing and indentation
 - Define reusable styles in Window.Resources
-
-**Example:**
-```csharp
-/// <summary>
-/// Applies shader settings to the display
-/// </summary>
-/// <param name="settings">Settings to apply</param>
-public void ApplyShaderSettings(DisplaySettings settings)
-{
-    // Implementation
-}
-```
 
 ### Adding New Features
 
@@ -254,48 +304,57 @@ public void ApplyShaderSettings(DisplaySettings settings)
 ```csharp
 public enum SubpixelLayout
 {
-    // ...existing...
-    NewLayoutType
+    RgbStripe,
+    WrgbStripe,
+    RgbTriangular,
+    Pentile,
+    NewLayoutType  // Add new layout
 }
 ```
 
-2. **Add to DisplayShaderService.cs**
-```csharp
-case SubpixelLayout.NewLayoutType:
-    ApplyNewLayoutSettings(settings);
-    break;
-
-private void ApplyNewLayoutSettings(DisplaySettings settings)
+2. **Add shader in SubpixelShader.cpp**
+```cpp
+float4 ApplyNewLayoutShader(float4 color, float2 texCoord, float intensity)
 {
-    SetClearTypeEnabled(true);
-    SetClearTypeContrast((uint)(customValue * settings.ShaderIntensity));
-    // Additional settings...
+    // Custom shader logic
+    return color;
 }
 ```
 
-3. **Add UI in MainWindow.xaml**
+3. **Update DirectWriteHook.cpp**
+```cpp
+case SubpixelLayout::NewLayoutType:
+    finalColor = ApplyNewLayoutShader(color, texCoord, intensity);
+    break;
+```
+
+4. **Add UI in MainWindow.xaml**
 ```xml
 <RadioButton x:Name="rbNewLayout"
              Content="New Layout Type"
-             GroupName="SubpixelLayout"
-             Checked="SubpixelLayout_Changed"/>
+             GroupName="DisplayType"
+             Checked="DisplayType_Changed">
+    <RadioButton.Content>
+        <StackPanel>
+            <TextBlock Text="New Layout" FontWeight="SemiBold"/>
+            <TextBlock Text="Description" 
+                      FontSize="11" 
+                      Foreground="{StaticResource TextSecondary}"/>
+        </StackPanel>
+    </RadioButton.Content>
+</RadioButton>
 ```
 
-4. **Update MainWindow.xaml.cs**
+5. **Update MainWindow.xaml.cs**
 ```csharp
-private void SubpixelLayout_Changed(object sender, RoutedEventArgs e)
+private void DisplayType_Changed(object sender, RoutedEventArgs e)
 {
-    // ...existing cases...
-    else if (rbNewLayout.IsChecked == true)
-        _currentSettings.SubpixelLayout = SubpixelLayout.NewLayoutType;
-}
+    if (_isInitializing) return;
 
-private void InitializeUIFromSettings()
-{
-    // ...existing cases...
-    case SubpixelLayout.NewLayoutType:
-        rbNewLayout.IsChecked = true;
-        break;
+    if (rbNewLayout.IsChecked == true)
+        _currentSettings.ShaderLayout = SubpixelLayout.NewLayoutType;
+    
+    ApplySettings();
 }
 ```
 
@@ -303,6 +362,7 @@ private void InitializeUIFromSettings()
 
 #### Manual Testing Checklist
 
+**C# Application:**
 - [ ] All subpixel layouts apply correctly
 - [ ] Shader intensity slider works (0-100%)
 - [ ] Enable/disable shader toggles correctly
@@ -311,10 +371,15 @@ private void InitializeUIFromSettings()
 - [ ] System tray icon shows and works
 - [ ] Double-click tray icon restores window
 - [ ] Settings persist after restart
-- [ ] Apply button saves settings
-- [ ] Close button respects minimize to tray setting
-- [ ] Text rendering changes are visible
-- [ ] Application starts minimized with --minimized flag
+- [ ] Status updates show correct process count
+- [ ] Active processes list displays
+
+**C++ Hook DLL:**
+- [ ] DLL loads into target processes
+- [ ] DirectWrite hooks apply correctly
+- [ ] Shaders execute without crashes
+- [ ] Configuration reads from shared memory
+- [ ] DLL unloads cleanly on exit
 
 #### Test Displays
 
@@ -324,38 +389,28 @@ If possible, test on:
 - Samsung QD-OLED display
 - High DPI display (150%, 200% scaling)
 
-#### Registry Testing
-
-Before release:
-```bash
-# Backup current settings
-reg export "HKCU\Control Panel\Desktop" desktop_backup.reg
-
-# Test application
-
-# Restore if needed
-reg import desktop_backup.reg
-```
-
 ### Debugging
 
-**Enable diagnostic output:**
+**C# Application:**
 ```csharp
-System.Diagnostics.Debug.WriteLine($"Applying {settings.SubpixelLayout}");
+System.Diagnostics.Debug.WriteLine($"Applying {settings.ShaderLayout}");
 ```
+View in Visual Studio: Debug ? Windows ? Output
 
-**View in Visual Studio:**
-- Debug ? Windows ? Output
-- Shows Debug.WriteLine messages
+**C++ Hook DLL:**
+```cpp
+OutputDebugStringA("Hook initialized\n");
+```
+View in DebugView or Visual Studio Output window
 
-**Common issues:**
-- **Registry access denied:** Run Visual Studio as Administrator
-- **Settings not applying:** Check if another app is overriding ClearType
-- **UI not updating:** Verify event handlers are connected in XAML
+**Common Issues:**
+- **DLL not loading:** Check that DisplayShaderHook.dll is in the same directory
+- **Injection fails:** Some processes may block DLL injection (protected processes)
+- **Shared memory error:** Ensure only one instance of app is running
 
 ### Performance Profiling
 
-**Startup Performance:**
+**C# Startup Performance:**
 ```csharp
 var sw = System.Diagnostics.Stopwatch.StartNew();
 // Code to measure
@@ -363,78 +418,109 @@ sw.Stop();
 Debug.WriteLine($"Operation took {sw.ElapsedMilliseconds}ms");
 ```
 
-**Memory Usage:**
-- Use Visual Studio Diagnostic Tools
-- Target: < 50 MB working set
-- No memory leaks on window open/close cycles
+**C++ Shader Performance:**
+- Keep shader logic simple
+- Avoid complex calculations in per-pixel code
+- Profile with PIX or RenderDoc
 
-### Building Installer
+### Building Release
 
-**Using Advanced Installer or WiX:**
-1. Create new installer project
-2. Add output files from `bin\Release\net8.0-windows\publish`
-3. Include .NET 8 Desktop Runtime prerequisite
-4. Add registry entries for settings
-5. Add shortcuts (Start Menu, Desktop optional)
-6. Set application icon
-
-**Or use ClickOnce:**
+**Complete Build:**
 ```bash
-dotnet publish -c Release -r win-x64 \
-  -p:PublishSingleFile=true \
-  -p:IncludeNativeLibrariesForSelfExtract=true \
-  --self-contained
+# Build C++ DLL
+msbuild Native\DisplayShaderHook\DisplayShaderHook.vcxproj /p:Configuration=Release /p:Platform=x64
+
+# Build C# app
+dotnet publish -c Release -r win-x64 --self-contained
+
+# Output in: bin\Release\net8.0-windows\win-x64\publish\
 ```
+
+**Files needed for distribution:**
+- DisplayShadersPowerToy.exe
+- DisplayShaderHook.dll
+- Runtime dependencies (if not self-contained)
+
+## Architecture Decisions
+
+### Why Shared Memory?
+
+**Pros:**
+- Fast communication between C# and C++
+- No file I/O overhead
+- Immediate configuration updates
+- No race conditions with file locking
+
+**Cons:**
+- Requires careful synchronization
+- Limited size (256 bytes)
+- Must handle process crashes
+
+### Why DLL Injection?
+
+**Pros:**
+- Access to DirectWrite rendering pipeline
+- Can apply custom shaders
+- Per-process optimization
+- No system-wide changes
+
+**Cons:**
+- May be blocked by anti-virus
+- Requires process elevation for some apps
+- Anti-cheat systems may detect
+
+### Why Not Kernel Driver?
+
+**Pros of User-Mode:**
+- No admin rights required
+- Easier to develop and debug
+- More compatible
+- Safer (can't BSOD)
+
+**Cons of User-Mode:**
+- Cannot hook all processes
+- Cannot modify display driver pipeline
+- Limited to application-level
 
 ## Future Enhancements
 
 ### Planned Features
 
 1. **Per-Monitor Configuration**
-   - Detect connected displays
-   - Store settings per display
-   - Auto-switch when focus changes
+   - Detect connected displays via EDID
+   - Store settings per monitor
+   - Auto-switch when window moves
 
-2. **Display Auto-Detection**
-   - Query monitor EDID data
-   - Identify manufacturer and model
-   - Auto-select subpixel layout
-
-3. **Advanced Shader Options**
+2. **Advanced Shader Options**
    - Custom gamma curves
    - Per-color channel adjustments
-   - DirectX overlay for real-time shaders
+   - User-defined shader profiles
 
-4. **UI Improvements**
-   - Preview pane with sample text
+3. **UI Improvements**
+   - Live preview of shader effect
    - Before/after comparison
    - Wizard for first-time setup
 
-5. **Settings Profiles**
-   - Save multiple configurations
-   - Quick-switch between profiles
-   - Import/export settings
+4. **Broader Compatibility**
+   - Hook GDI+ rendering
+   - Support Direct2D
+   - Game mode detection
 
-### Contributing Guidelines
+## Contributing Guidelines
 
 1. **Fork the repository**
 2. **Create a feature branch** (`git checkout -b feature/AmazingFeature`)
-3. **Commit your changes** (`git commit -m 'Add some AmazingFeature'`)
-4. **Push to the branch** (`git push origin feature/AmazingFeature`)
-5. **Open a Pull Request**
+3. **Make your changes** (C++ and/or C#)
+4. **Test thoroughly** (both components)
+5. **Update documentation**
+6. **Submit a Pull Request**
 
 **PR Requirements:**
 - Describe what the change does
 - Include testing steps
-- Update CHANGELOG.md
+- Update CHANGELOG.md if user-facing
 - Follow existing code style
 - No breaking changes without discussion
-
-### Community
-
-- **Issues:** Report bugs or request features on GitHub
-- **Discussions:** Ask questions or share configurations
-- **Pull Requests:** Contribute code improvements
 
 ## License
 
@@ -444,19 +530,28 @@ This project is licensed under the MIT License - see LICENSE file for details.
 
 - Inspired by PowerToys Issue #25595
 - Based on Blur Busters Display Shaders specification
+- MinHook library by Tsuda Kageyu
 - Community feedback from OLED display users
-- Windows ClearType research and documentation
 
 ## Resources
 
-**Windows ClearType:**
-- [ClearType Text Tuner](https://docs.microsoft.com/en-us/typography/cleartype/)
-- [SystemParametersInfo API](https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-systemparametersinfow)
+**DirectWrite:**
+- [DirectWrite Documentation](https://docs.microsoft.com/en-us/windows/win32/directwrite/direct-write-portal)
+- [Text Rendering](https://docs.microsoft.com/en-us/windows/win32/directwrite/text-rendering)
+
+**HLSL Shaders:**
+- [HLSL Reference](https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl)
+- [Shader Model 5](https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-sm5)
+
+**API Hooking:**
+- [MinHook Documentation](https://github.com/TsudaKageyu/minhook)
+- [DLL Injection Techniques](https://www.codeproject.com/Articles/4610/Three-Ways-to-Inject-Your-Code-into-Another-Proces)
 
 **Display Technology:**
-- [Blur Busters Display Motion Blur](https://blurbusters.com)
-- [WOLED vs QD-OLED Comparison](https://tftcentral.co.uk)
+- [Blur Busters](https://blurbusters.com)
+- [WOLED vs QD-OLED](https://tftcentral.co.uk)
 
 **Development:**
 - [.NET 8 Documentation](https://docs.microsoft.com/en-us/dotnet/)
 - [WPF Tutorial](https://docs.microsoft.com/en-us/dotnet/desktop/wpf/)
+- [C++ Best Practices](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines)
