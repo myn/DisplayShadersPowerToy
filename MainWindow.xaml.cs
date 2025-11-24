@@ -323,6 +323,56 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// DEVELOPER ONLY: Force eject all DLLs from hooked processes
+    /// WARNING: Will cause crashes! Only use when rebuilding/deleting DLLs
+    /// </summary>
+    private void ForceEjectDlls_Click(object sender, RoutedEventArgs e)
+    {
+        var result = System.Windows.MessageBox.Show(
+            "?? WARNING: Force Eject DLLs ??\n\n" +
+            "This will forcibly unload DisplayShaderHook.dll from all hooked processes.\n\n" +
+            "CONSEQUENCES:\n" +
+            "• Applications will likely crash or freeze\n" +
+            "• You may lose unsaved work\n" +
+            "• Windows Explorer may need to restart\n\n" +
+            "Only proceed if you need to rebuild or delete the DLL files during development.\n\n" +
+            "Do you want to continue?",
+            "Developer Tool - Force Eject DLLs",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                Helpers.DiagnosticLogger.Log("MainWindow", "?? User initiated force DLL ejection");
+                _displayShaderService.ForceEjectAllDlls();
+                
+                System.Windows.MessageBox.Show(
+                    "DLL ejection complete.\n\n" +
+                    "Some applications may have crashed.\n" +
+                    "The DLL file should now be unlocked for deletion/rebuild.",
+                    "Force Eject Complete",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                
+                // Update status
+                UpdateQuickStatus();
+            }
+            catch (Exception ex)
+            {
+                Helpers.DiagnosticLogger.LogError("MainWindow", "Force eject failed", ex);
+                System.Windows.MessageBox.Show(
+                    $"Force eject failed:\n\n{ex.Message}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+    }
+
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
         if (_currentSettings.MinimizeToTray)

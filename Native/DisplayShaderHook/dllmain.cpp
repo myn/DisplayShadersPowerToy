@@ -99,8 +99,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         // Stop config watcher if running
         g_running.store(false, std::memory_order_release);
         
-        // Signal ConfigLoader to stop watching BEFORE joining
-        // This ensures the watcher thread exits its loop
+        // Signal ConfigLoader to stop watching
         if (g_initialized.load(std::memory_order_acquire)) {
             try {
                 ConfigLoader::Instance().Shutdown();
@@ -108,8 +107,11 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
             catch (...) {}
         }
 
+        // DO NOT JOIN THREAD HERE - Causes deadlock with Loader Lock
+        // The thread should have been joined by ShutdownHook
+        // If not (process exit), we let it die with the process
         if (g_configWatcherThread.joinable()) {
-            g_configWatcherThread.join();
+            g_configWatcherThread.detach();
         }
 
         // Shutdown other components
@@ -117,7 +119,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
             try {
                 DirectWriteHook::Instance().Shutdown();
                 SubpixelShader::Instance().Shutdown();
-                // ConfigLoader::Instance().Shutdown(); // Already called
             }
             catch (...) {
                 // Ignore exceptions during shutdown
@@ -174,6 +175,39 @@ extern "C" {
         catch (...) {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Clean shutdown of the hook
+    /// Must be called before unloading the DLL to avoid deadlocks
+    /// </summary>
+    DISPLAYSHADER_API void ShutdownHook() {
+        LogDebug(L"ShutdownHook called");
+        
+        // Stop config watcher
+        g_running.store(false, std::memory_order_release);
+        
+        // Signal ConfigLoader to stop watching
+        try {
+            ConfigLoader::Instance().Shutdown();
+        }
+        catch (...) {}
+
+        // Join the thread - SAFE here because we are not in DllMain
+        if (g_configWatcherThread.joinable()) {
+            g_configWatcherThread.join();
+        }
+
+        // Shutdown components
+        if (g_initialized.load(std::memory_order_acquire)) {
+            try {
+                DirectWriteHook::Instance().Shutdown();
+                SubpixelShader::Instance().Shutdown();
+            }
+            catch (...) {}
+        }
+        
+        g_initialized.store(false, std::memory_order_release);
     }
 
     /// <summary>

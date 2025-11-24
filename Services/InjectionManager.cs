@@ -16,7 +16,7 @@ namespace DisplayShadersPowerToy.Services;
 public class InjectionManager : IDisposable
 {
     private readonly HashSet<int> _injectedProcesses = new();
-    private readonly Dictionary<int, IntPtr> _injectedModules = new(); // Store module handles for ejection
+    private readonly Dictionary<int, IntPtr> _injectedModules = new(); // Store module handles (for reference only - not used for ejection)
     private readonly HashSet<int> _failedProcesses = new(); // Track processes that failed injection
     private readonly HashSet<string> _systemProcessBlacklist;
     private CancellationTokenSource? _monitoringCts;
@@ -166,8 +166,13 @@ public class InjectionManager : IDisposable
         _monitoringCts?.Dispose();
         _monitoringCts = null;
         
-        // Eject DLL from all injected processes (async to not block)
-        Task.Run(() => EjectFromAllProcesses()).Wait(TimeSpan.FromSeconds(10));
+        // GRACEFUL SHUTDOWN: Disable hooks instead of forcibly unloading DLLs
+        // The ShaderService will update the shared memory config to disabled=true
+        // This allows hooked processes to continue running without crashes
+        Debug.WriteLine("[InjectionManager] Hooks will be disabled via config update (DLLs remain loaded)");
+        
+        // Note: We do NOT call EjectFromAllProcesses() anymore
+        // The DLLs stay loaded but inactive, preventing application crashes
     }
 
     /// <summary>
@@ -642,6 +647,48 @@ public class InjectionManager : IDisposable
     }
 
     /// <summary>
+    /// Gracefully disable hooks in a specific process (without ejecting DLL)
+    /// </summary>
+    private bool DisableHooksInProcess(int processId)
+    {
+        // Note: We no longer actually eject the DLL
+        // The ShaderService updates the shared memory configuration
+        // which all injected processes read to enable/disable hooks
+        
+        // Remove from tracking since we're no longer managing this process
+        _injectedModules.Remove(processId);
+        
+        Debug.WriteLine($"[InjectionManager] Hooks disabled for PID {processId} (DLL remains loaded)");
+        return true;
+    }
+
+    /// <summary>
+    /// Gracefully disable hooks in all injected processes (without ejecting DLLs)
+    /// </summary>
+    private void DisableHooksInAllProcesses()
+    {
+        if (_injectedProcesses.Count == 0)
+        {
+            Debug.WriteLine("[InjectionManager] No processes to disable hooks in");
+            return;
+        }
+
+        Debug.WriteLine($"[InjectionManager] Disabling hooks in {_injectedProcesses.Count} processes...");
+        
+        // Note: The actual hook disabling is done by ShaderService updating shared memory
+        // We just clear our tracking here
+        
+        int count = _injectedProcesses.Count;
+        
+        // Clear all tracking
+        _injectedProcesses.Clear();
+        _injectedModules.Clear();
+        
+        Debug.WriteLine($"[InjectionManager] Hooks disabled in {count} processes (DLLs remain loaded)");
+        Debug.WriteLine($"[InjectionManager] Applications will continue running normally");
+    }
+
+    /// <summary>
     /// Eject DLL from a specific process
     /// </summary>
     private bool EjectDll(int processId)
@@ -681,6 +728,53 @@ public class InjectionManager : IDisposable
                 Debug.WriteLine($"[InjectionManager] Failed to get FreeLibrary address");
                 return false;
             }
+
+            // --- NEW: Call ShutdownHook first to avoid deadlocks ---
+            IntPtr localDll = IntPtr.Zero;
+            try 
+            {
+                // Calculate offset of ShutdownHook in the DLL
+                // We need to load it locally temporarily to find the offset
+                string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DisplayShaderHook.dll");
+                localDll = NativeMethods.LoadLibrary(dllPath);
+                
+                if (localDll != IntPtr.Zero)
+                {
+                    IntPtr localShutdown = NativeMethods.GetProcAddress(localDll, "ShutdownHook");
+                    if (localShutdown != IntPtr.Zero)
+                    {
+                        // Calculate offset: Function Address - Base Address
+                        long offset = localShutdown.ToInt64() - localDll.ToInt64();
+                        
+                        // Calculate remote address: Remote Base + Offset
+                        IntPtr remoteShutdown = new IntPtr(hModule.ToInt64() + offset);
+                        
+                        Debug.WriteLine($"[InjectionManager] Calling ShutdownHook at {remoteShutdown:X} (Offset: {offset:X})");
+                        
+                        // Call ShutdownHook remotely
+                        IntPtr hShutdownThread = NativeMethods.CreateRemoteThread(
+                            hProcess, IntPtr.Zero, 0, remoteShutdown, IntPtr.Zero, 0, IntPtr.Zero);
+                            
+                        if (hShutdownThread != IntPtr.Zero)
+                        {
+                            NativeMethods.WaitForSingleObject(hShutdownThread, 2000);
+                            NativeMethods.CloseHandle(hShutdownThread);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[InjectionManager] Error calling ShutdownHook: {ex.Message}");
+            }
+            finally
+            {
+                if (localDll != IntPtr.Zero)
+                {
+                    NativeMethods.FreeLibrary(localDll);
+                }
+            }
+            // ------------------------------------------------------
 
             // Create remote thread to call FreeLibrary with our module handle
             IntPtr hThread = NativeMethods.CreateRemoteThread(
@@ -802,6 +896,63 @@ public class InjectionManager : IDisposable
     }
     
     /// <summary>
+    /// DEVELOPER/CLEANUP ONLY: Force eject DLLs from all processes
+    /// WARNING: May cause application crashes! Only use when:
+    /// - Rebuilding the project
+    /// - Cleaning build directory
+    /// - Development/debugging scenarios
+    /// </summary>
+    public void ForceEjectAllDlls()
+    {
+        if (_injectedProcesses.Count == 0)
+        {
+            Debug.WriteLine("[InjectionManager] No processes to force-eject from");
+            return;
+        }
+
+        Debug.WriteLine("[InjectionManager] ?? FORCE EJECTION - May cause crashes!");
+        Debug.WriteLine($"[InjectionManager] Force-ejecting DLL from {_injectedProcesses.Count} processes...");
+        
+        int ejected = 0;
+        int failed = 0;
+        
+        // Create a copy of the list to avoid modification during iteration
+        var processIds = _injectedProcesses.ToList();
+        
+        // Sequential ejection (safer than parallel for force eject)
+        foreach (var pid in processIds)
+        {
+            try
+            {
+                if (EjectDll(pid))
+                {
+                    ejected++;
+                    _injectedProcesses.Remove(pid);
+                }
+                else
+                {
+                    failed++;
+                }
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                Debug.WriteLine($"[InjectionManager] Exception force-ejecting from PID {pid}: {ex.Message}");
+            }
+        }
+        
+        // Clear all tracking
+        _injectedProcesses.Clear();
+        _injectedModules.Clear();
+        _failedProcesses.Clear();
+        
+        Debug.WriteLine($"[InjectionManager] Force ejection complete:");
+        Debug.WriteLine($"  ? Ejected: {ejected}");
+        Debug.WriteLine($"  ? Failed: {failed}");
+        Debug.WriteLine($"[InjectionManager] Note: Some applications may have crashed");
+    }
+
+    /// <summary>
     /// Get count of currently injected processes
     /// </summary>
     public int GetInjectedProcessCount()
@@ -910,6 +1061,12 @@ public class InjectionManager : IDisposable
     /// </summary>
     private static class NativeMethods
     {
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern IntPtr LoadLibrary(string libname);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern bool FreeLibrary(IntPtr hModule);
+
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr OpenProcess(
             ProcessAccessFlags dwDesiredAccess,

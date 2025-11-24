@@ -46,6 +46,7 @@ namespace DisplayShader {
         std::wstring m_configDirectory;
         std::wstring m_configFilePath;
         HANDLE m_changeNotification = INVALID_HANDLE_VALUE;
+        HANDLE m_shutdownEvent = INVALID_HANDLE_VALUE;
         bool m_watching = false;
     };
 

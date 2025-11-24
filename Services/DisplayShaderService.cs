@@ -187,4 +187,21 @@ public class DisplayShaderService : IDisposable
 
         return settings;
     }
+
+    /// <summary>
+    /// DEVELOPER/CLEANUP ONLY: Force eject DLLs from all processes
+    /// WARNING: Will likely cause crashes in hooked applications!
+    /// Only use when you need to rebuild/delete DLL files during development.
+    /// </summary>
+    public void ForceEjectAllDlls()
+    {
+        if (!_shaderModeAvailable || _injectionManager == null)
+        {
+            System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Cannot force-eject - no injection manager");
+            return;
+        }
+
+        System.Diagnostics.Debug.WriteLine("[DisplayShaderService] ?? WARNING: Force-ejecting all DLLs");
+        _injectionManager.ForceEjectAllDlls();
+    }
 }

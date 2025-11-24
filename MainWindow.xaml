@@ -15,6 +15,37 @@
         StateChanged="Window_StateChanged"
         Background="#F8F9FA">
 
+    <!-- Add Developer Menu -->
+    <Window.ContextMenu>
+        <ContextMenu>
+            <MenuItem Header="Developer Tools">
+                <MenuItem Click="ForceEjectDlls_Click">
+                    <MenuItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="?" 
+                                      Foreground="#FF9800" 
+                                      FontWeight="Bold" 
+                                      Margin="0,0,8,0"/>
+                            <TextBlock Text="Force Eject All DLLs"/>
+                        </StackPanel>
+                    </MenuItem.Header>
+                    <MenuItem.ToolTip>
+                        <ToolTip>
+                            <TextBlock>
+                                <Run FontWeight="Bold" Text="WARNING: May crash applications!"/>
+                                <LineBreak/>
+                                <Run Text="Use only when rebuilding or deleting DLL files."/>
+                            </TextBlock>
+                        </ToolTip>
+                    </MenuItem.ToolTip>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="View Logs" Click="ViewLog_Click"/>
+                <MenuItem Header="Open Log Folder" Click="OpenLogFolder_Click"/>
+            </MenuItem>
+        </ContextMenu>
+    </Window.ContextMenu>
+
     <Window.Resources>
         <!-- Modern Color Palette -->
         <SolidColorBrush x:Key="Primary" Color="#0066FF"/>

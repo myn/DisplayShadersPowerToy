@@ -38,6 +38,13 @@ namespace DisplayShader {
 
         m_configFilePath = m_configDirectory + L"\\shader_config.ini";
         
+        // Create shutdown event
+        m_shutdownEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+        if (m_shutdownEvent == nullptr) {
+            LogError(L"Failed to create shutdown event: %d", GetLastError());
+            return false;
+        }
+
         LogDebug(L"Config file path: %s", m_configFilePath.c_str());
         LogDebug(L"ConfigLoader initialized successfully (no admin required)");
         
@@ -49,6 +56,11 @@ namespace DisplayShader {
         
         m_watching = false;
         
+        // Signal shutdown
+        if (m_shutdownEvent != nullptr && m_shutdownEvent != INVALID_HANDLE_VALUE) {
+            SetEvent(m_shutdownEvent);
+        }
+
         if (m_changeNotification != INVALID_HANDLE_VALUE) {
             FindCloseChangeNotification(m_changeNotification);
             m_changeNotification = INVALID_HANDLE_VALUE;
@@ -123,8 +135,10 @@ namespace DisplayShader {
             return;
         }
 
+        HANDLE handles[] = { m_changeNotification, m_shutdownEvent };
+
         while (m_watching) {
-            DWORD result = WaitForSingleObject(m_changeNotification, 1000);
+            DWORD result = WaitForMultipleObjects(2, handles, FALSE, 1000);
 
             if (result == WAIT_OBJECT_0) {
                 // File changed, wait a moment for write to complete
@@ -138,7 +152,15 @@ namespace DisplayShader {
                 }
 
                 // Reset notification
-                FindNextChangeNotification(m_changeNotification);
+                if (!FindNextChangeNotification(m_changeNotification)) {
+                    LogError(L"FindNextChangeNotification failed: %d", GetLastError());
+                    break;
+                }
+            }
+            else if (result == WAIT_OBJECT_0 + 1) {
+                // Shutdown event signaled
+                LogDebug(L"Shutdown event received");
+                break;
             }
             else if (result == WAIT_TIMEOUT) {
                 // Normal, continue waiting
@@ -147,6 +169,11 @@ namespace DisplayShader {
                 LogError(L"Wait failed: %d", GetLastError());
                 break;
             }
+        }
+
+        if (m_shutdownEvent != nullptr && m_shutdownEvent != INVALID_HANDLE_VALUE) {
+            CloseHandle(m_shutdownEvent);
+            m_shutdownEvent = INVALID_HANDLE_VALUE;
         }
 
         LogDebug(L"Stopped watching for config changes");
