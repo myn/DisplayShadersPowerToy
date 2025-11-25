@@ -60,8 +60,11 @@ namespace DisplayShader {
     }
 
     void DirectWriteHook::UpdateConfig(const ShaderConfig& config) {
-        LogDebug(L"Updating shader config: Layout=%d, Intensity=%.2f, Enabled=%d",
-            static_cast<int>(config.layout), config.intensity, config.enabled);
+        LogDebug(L"Updating shader config: DefaultLayout=%d, DefaultIntensity=%.2f, Enabled=%d, Monitors=%d",
+            static_cast<int>(config.defaultProfile.layout), 
+            config.defaultProfile.intensity, 
+            config.enabled,
+            config.monitorProfiles.size());
 
         m_currentConfig = config;
 

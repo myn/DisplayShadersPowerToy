@@ -50,34 +50,31 @@ namespace DisplayShader {
         SubpixelShader& operator=(const SubpixelShader&) = delete;
 
         bool m_initialized = false;
-        ShaderConfig m_config;
-        std::unique_ptr<SubpixelMask> m_currentMask;
-
+        ShaderConfig m_config; // Now GlobalConfig
+        
         // D3D11 resources
         ID3D11Device* m_device = nullptr;
         ID3D11DeviceContext* m_context = nullptr;
         ID3D11PixelShader* m_pixelShader = nullptr;
-        ID3D11Texture2D* m_maskTexture = nullptr;
-        ID3D11ShaderResourceView* m_maskSRV = nullptr;
+        
+        // Cache of mask textures for each layout type
+        std::map<SubpixelLayout, ID3D11Texture2D*> m_maskTextures;
+        std::map<SubpixelLayout, ID3D11ShaderResourceView*> m_maskSRVs;
 
         // Shader creation and compilation
         bool CreateShaders();
-        bool CreateMaskTexture();
+        bool CreateAllMaskTextures();
+        bool CreateMaskTextureForLayout(SubpixelLayout layout);
         bool CompileSubpixelShader(const char* hlslCode, ID3D11PixelShader** outShader);
         bool InitializeD3D11();
 
         // Layout-specific mask generation
-        void GenerateRgbStripeMask();
-        void GenerateWrgbStripeMask();
-        void GenerateRgbTriangularMask();
-        void GeneratePentileMask();
+        std::unique_ptr<SubpixelMask> GenerateMaskForLayout(SubpixelLayout layout);
 
-        // Apply subpixel correction to rendered glyphs
-        void ApplySubpixelCorrection(
-            ID3D11Texture2D* glyphTexture,
-            int x, int y, int width, int height);
-        
-        void ApplySubpixelEffect();
+        // Helper to find monitor from context
+        std::wstring GetMonitorIdFromContext(void* clientDrawingContext);
+
+        void ApplySubpixelEffect(const RenderProfile& profile);
     };
 
 } // namespace DisplayShader

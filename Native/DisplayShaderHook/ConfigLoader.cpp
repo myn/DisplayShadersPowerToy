@@ -78,9 +78,20 @@ namespace DisplayShader {
         }
 
         std::string line;
+        std::string currentSection = "";
+
         while (std::getline(file, line)) {
             // Skip comments and empty lines
-            if (line.empty() || line[0] == '#' || line[0] == '[') {
+            if (line.empty() || line[0] == '#') {
+                continue;
+            }
+
+            // Check for section
+            if (line[0] == '[') {
+                size_t end = line.find(']');
+                if (end != std::string::npos) {
+                    currentSection = line.substr(1, end - 1);
+                }
                 continue;
             }
 
@@ -99,23 +110,48 @@ namespace DisplayShader {
             value.erase(0, value.find_first_not_of(" \t\r\n"));
             value.erase(value.find_last_not_of(" \t\r\n") + 1);
 
-            if (key == "Enabled") {
-                outConfig.enabled = (value == "True" || value == "true" || value == "1");
+            if (currentSection == "Shader") {
+                if (key == "Enabled") {
+                    outConfig.enabled = (value == "True" || value == "true" || value == "1");
+                }
+                else if (key == "Layout") {
+                    outConfig.defaultProfile.layout = static_cast<SubpixelLayout>(std::stoi(value));
+                }
+                else if (key == "Intensity") {
+                    outConfig.defaultProfile.intensity = std::stof(value);
+                }
             }
-            else if (key == "Layout") {
-                outConfig.layout = static_cast<SubpixelLayout>(std::stoi(value));
-            }
-            else if (key == "Intensity") {
-                outConfig.intensity = std::stof(value);
+            else if (currentSection.find("Monitor_") == 0) {
+                // Parse monitor section
+                // Section name format: Monitor_#.#.DISPLAY1
+                // We need to extract #.#.DISPLAY1 and convert # back to \
+                
+                std::string safeMonitorId = currentSection.substr(8); // Skip "Monitor_"
+                std::wstring monitorId(safeMonitorId.begin(), safeMonitorId.end());
+                
+                // Replace # with \ (simple loop)
+                for (auto& ch : monitorId) {
+                    if (ch == L'#') ch = L'\\';
+                }
+
+                // Get or create profile
+                RenderProfile& profile = outConfig.monitorProfiles[monitorId];
+
+                if (key == "Layout") {
+                    profile.layout = static_cast<SubpixelLayout>(std::stoi(value));
+                }
+                else if (key == "Intensity") {
+                    profile.intensity = std::stof(value);
+                }
             }
         }
 
         file.close();
 
-        LogDebug(L"Loaded config from file: Layout=%d, Intensity=%.2f, Enabled=%d",
-            static_cast<int>(outConfig.layout),
-            outConfig.intensity,
-            outConfig.enabled);
+        LogDebug(L"Loaded config: Enabled=%d, DefaultLayout=%d, Monitors=%d",
+            outConfig.enabled,
+            static_cast<int>(outConfig.defaultProfile.layout),
+            outConfig.monitorProfiles.size());
 
         return true;
     }

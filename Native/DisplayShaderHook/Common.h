@@ -6,6 +6,7 @@
 #include <d2d1.h>
 #include <string>
 #include <vector>
+#include <map>
 #include <memory>
 
 // Export macro for DLL
@@ -29,26 +30,31 @@ namespace DisplayShader {
     };
 
     /// <summary>
-    /// Configuration for shader behavior
+    /// Configuration for a specific render profile (per monitor or default)
     /// </summary>
-    struct ShaderConfig {
+    struct RenderProfile {
         SubpixelLayout layout;
         float intensity;              // 0.0 to 1.0
-        bool enabled;
-        wchar_t maskFilePath[MAX_PATH];  // Path to 32x32 or 64x64 PNG mask
-        int maskWidth;
-        int maskHeight;
         
-        ShaderConfig() 
+        RenderProfile() 
             : layout(SubpixelLayout::RgbStripe)
             , intensity(1.0f)
-            , enabled(true)
-            , maskWidth(0)
-            , maskHeight(0)
-        {
-            maskFilePath[0] = L'\0';
-        }
+        {}
     };
+
+    /// <summary>
+    /// Global configuration containing defaults and per-monitor overrides
+    /// </summary>
+    struct GlobalConfig {
+        bool enabled;
+        RenderProfile defaultProfile;
+        std::map<std::wstring, RenderProfile> monitorProfiles;
+        
+        GlobalConfig() : enabled(true) {}
+    };
+
+    // Typedef for backward compatibility if needed, or just replace usage
+    using ShaderConfig = GlobalConfig;
 
     /// <summary>
     /// Subpixel mask data loaded from PNG

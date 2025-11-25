@@ -169,6 +169,18 @@ public class ShaderService : IDisposable
             writer.WriteLine($"Layout={settings.ShaderLayout}");
             writer.WriteLine($"Intensity={settings.ShaderIntensity:F4}");
             writer.WriteLine();
+            
+            // Write per-monitor settings
+            foreach (var monitor in settings.MonitorSettings)
+            {
+                // Encode monitor ID for section name
+                string safeMonitorId = monitor.Key.Replace('\\', '#');
+                writer.WriteLine($"[Monitor_{safeMonitorId}]");
+                writer.WriteLine($"Layout={monitor.Value.ShaderLayout}");
+                writer.WriteLine($"Intensity={monitor.Value.ShaderIntensity:F4}");
+                writer.WriteLine();
+            }
+
             writer.WriteLine("# Layout values:");
             writer.WriteLine("# 0 = RgbStripe (Standard LCD)");
             writer.WriteLine("# 1 = WrgbStripe (WOLED)");

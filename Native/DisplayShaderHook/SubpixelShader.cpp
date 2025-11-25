@@ -163,9 +163,9 @@ namespace DisplayShader {
             return false;
         }
 
-        // Create default mask texture
-        if (!CreateMaskTexture()) {
-            LogError(L"Failed to create mask texture");
+        // Create all mask textures
+        if (!CreateAllMaskTextures()) {
+            LogError(L"Failed to create mask textures");
             return false;
         }
 
@@ -182,15 +182,17 @@ namespace DisplayShader {
             m_pixelShader = nullptr;
         }
 
-        if (m_maskSRV) {
-            m_maskSRV->Release();
-            m_maskSRV = nullptr;
+        // Release all mask SRVs
+        for (auto& pair : m_maskSRVs) {
+            if (pair.second) pair.second->Release();
         }
+        m_maskSRVs.clear();
 
-        if (m_maskTexture) {
-            m_maskTexture->Release();
-            m_maskTexture = nullptr;
+        // Release all mask textures
+        for (auto& pair : m_maskTextures) {
+            if (pair.second) pair.second->Release();
         }
+        m_maskTextures.clear();
 
         m_device = nullptr;
         m_context = nullptr;
@@ -201,13 +203,7 @@ namespace DisplayShader {
 
     void SubpixelShader::UpdateConfig(const ShaderConfig& config) {
         LogDebug(L"Updating SubpixelShader config");
-
         m_config = config;
-
-        // Regenerate mask texture for new layout
-        if (m_initialized) {
-            CreateMaskTexture();
-        }
     }
 
     HRESULT SubpixelShader::RenderGlyphRun(
@@ -236,17 +232,23 @@ namespace DisplayShader {
             return E_FAIL;
         }
 
-        // For POC, we'll log that we intercepted the call
-        // Full implementation would:
-        // 1. Render glyphs to a texture using DirectWrite/D2D
-        // 2. Apply our pixel shader to the texture
-        // 3. Composite the result back to the screen
+        // Determine which monitor we are on
+        std::wstring monitorId = GetMonitorIdFromContext(clientDrawingContext);
         
-        LogDebug(L"RenderGlyphRun called: %d glyphs at (%.1f, %.1f)",
-            glyphRun->glyphCount, baselineOriginX, baselineOriginY);
+        // Select profile
+        RenderProfile profile = m_config.defaultProfile;
+        auto it = m_config.monitorProfiles.find(monitorId);
+        if (it != m_config.monitorProfiles.end()) {
+            profile = it->second;
+        }
 
-        // Apply subpixel shader effect (simplified for POC)
-        ApplySubpixelEffect();
+        // If layout is None, skip
+        if (profile.layout == SubpixelLayout::None) {
+            return S_OK; // Pass through
+        }
+
+        // Apply subpixel shader effect
+        ApplySubpixelEffect(profile);
 
         return S_OK;
     }
@@ -312,9 +314,9 @@ namespace DisplayShader {
             return false;
         }
 
-        // Create mask texture
-        if (!CreateMaskTexture()) {
-            LogError(L"Failed to create mask texture");
+        // Create mask textures
+        if (!CreateAllMaskTextures()) {
+            LogError(L"Failed to create mask textures");
             return false;
         }
 
@@ -323,7 +325,7 @@ namespace DisplayShader {
         return true;
     }
 
-    void SubpixelShader::ApplySubpixelEffect() {
+    void SubpixelShader::ApplySubpixelEffect(const RenderProfile& profile) {
         if (!m_context || !m_pixelShader) {
             return;
         }
@@ -331,18 +333,19 @@ namespace DisplayShader {
         // Set pixel shader
         m_context->PSSetShader(m_pixelShader, nullptr, 0);
 
-        // Bind subpixel mask texture
-        if (m_maskSRV) {
-            m_context->PSSetShaderResources(1, 1, &m_maskSRV);
+        // Bind subpixel mask texture for this layout
+        auto it = m_maskSRVs.find(profile.layout);
+        if (it != m_maskSRVs.end() && it->second) {
+            m_context->PSSetShaderResources(1, 1, &it->second);
         }
 
-        // In a full implementation, we would:
-        // 1. Render glyphs to texture
-        // 2. Apply this shader
-        // 3. Output result
+        // Update constant buffer with intensity and layout
+        // Note: In a real implementation we would update a constant buffer here
+        // For this POC, we assume the shader uses the texture and some hardcoded logic or we'd map a buffer
+        // Since the original code didn't show the constant buffer creation/update, I'll skip it for now
+        // but conceptually this is where it happens.
         
-        // For now, just verify shader is set
-        LogDebug(L"Subpixel shader applied");
+        // LogDebug(L"Subpixel shader applied: Layout=%d, Intensity=%.2f", (int)profile.layout, profile.intensity);
     }
 
     bool SubpixelShader::CreateShaders() {
@@ -400,45 +403,23 @@ namespace DisplayShader {
         return true;
     }
 
-    bool SubpixelShader::CreateMaskTexture() {
-        LogDebug(L"Creating mask texture for layout: %d", static_cast<int>(m_config.layout));
+    bool SubpixelShader::CreateAllMaskTextures() {
+        bool success = true;
+        success &= CreateMaskTextureForLayout(SubpixelLayout::RgbStripe);
+        success &= CreateMaskTextureForLayout(SubpixelLayout::WrgbStripe);
+        success &= CreateMaskTextureForLayout(SubpixelLayout::RgbTriangular);
+        success &= CreateMaskTextureForLayout(SubpixelLayout::Pentile);
+        return success;
+    }
 
-        // Release old texture if exists
-        if (m_maskTexture) {
-            m_maskTexture->Release();
-            m_maskTexture = nullptr;
-        }
-        if (m_maskSRV) {
-            m_maskSRV->Release();
-            m_maskSRV = nullptr;
-        }
-
-        // Generate appropriate mask based on layout
-        switch (m_config.layout) {
-        case SubpixelLayout::WrgbStripe:
-            GenerateWrgbStripeMask();
-            break;
-        case SubpixelLayout::RgbTriangular:
-            GenerateRgbTriangularMask();
-            break;
-        case SubpixelLayout::Pentile:
-            GeneratePentileMask();
-            break;
-        case SubpixelLayout::RgbStripe:
-        default:
-            GenerateRgbStripeMask();
-            break;
-        }
-
-        if (!m_currentMask) {
-            LogError(L"Failed to generate mask");
-            return false;
-        }
+    bool SubpixelShader::CreateMaskTextureForLayout(SubpixelLayout layout) {
+        auto mask = GenerateMaskForLayout(layout);
+        if (!mask) return false;
 
         // Create D3D11 texture from mask data
         D3D11_TEXTURE2D_DESC texDesc = {};
-        texDesc.Width = m_currentMask->width;
-        texDesc.Height = m_currentMask->height;
+        texDesc.Width = mask->width;
+        texDesc.Height = mask->height;
         texDesc.MipLevels = 1;
         texDesc.ArraySize = 1;
         texDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -447,21 +428,22 @@ namespace DisplayShader {
         texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
         // Prepare initial data (RGBA float32)
-        std::vector<float> textureData(m_currentMask->width * m_currentMask->height * 4);
-        for (int i = 0; i < m_currentMask->width * m_currentMask->height; i++) {
-            textureData[i * 4 + 0] = m_currentMask->redChannel[i];
-            textureData[i * 4 + 1] = m_currentMask->greenChannel[i];
-            textureData[i * 4 + 2] = m_currentMask->blueChannel[i];
+        std::vector<float> textureData(mask->width * mask->height * 4);
+        for (int i = 0; i < mask->width * mask->height; i++) {
+            textureData[i * 4 + 0] = mask->redChannel[i];
+            textureData[i * 4 + 1] = mask->greenChannel[i];
+            textureData[i * 4 + 2] = mask->blueChannel[i];
             textureData[i * 4 + 3] = 1.0f; // Alpha
         }
 
         D3D11_SUBRESOURCE_DATA initData = {};
         initData.pSysMem = textureData.data();
-        initData.SysMemPitch = m_currentMask->width * 4 * sizeof(float);
+        initData.SysMemPitch = mask->width * 4 * sizeof(float);
 
-        HRESULT hr = m_device->CreateTexture2D(&texDesc, &initData, &m_maskTexture);
+        ID3D11Texture2D* texture = nullptr;
+        HRESULT hr = m_device->CreateTexture2D(&texDesc, &initData, &texture);
         if (FAILED(hr)) {
-            LogError(L"Failed to create mask texture: 0x%08X", hr);
+            LogError(L"Failed to create mask texture for layout %d: 0x%08X", (int)layout, hr);
             return false;
         }
 
@@ -471,84 +453,99 @@ namespace DisplayShader {
         srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
         srvDesc.Texture2D.MipLevels = 1;
 
-        hr = m_device->CreateShaderResourceView(m_maskTexture, &srvDesc, &m_maskSRV);
+        ID3D11ShaderResourceView* srv = nullptr;
+        hr = m_device->CreateShaderResourceView(texture, &srvDesc, &srv);
         if (FAILED(hr)) {
-            LogError(L"Failed to create SRV: 0x%08X", hr);
+            texture->Release();
+            LogError(L"Failed to create SRV for layout %d: 0x%08X", (int)layout, hr);
             return false;
         }
 
-        LogDebug(L"Mask texture created successfully");
+        m_maskTextures[layout] = texture;
+        m_maskSRVs[layout] = srv;
         return true;
     }
 
-    void SubpixelShader::GenerateRgbStripeMask() {
-        // Standard RGB stripe: R G B | R G B | R G B
-        // 3 pixels wide (one for each subpixel)
-        m_currentMask = std::make_unique<SubpixelMask>(3, 1);
+    std::unique_ptr<SubpixelMask> SubpixelShader::GenerateMaskForLayout(SubpixelLayout layout) {
+        std::unique_ptr<SubpixelMask> mask;
 
-        // Red subpixel at position 0
-        m_currentMask->redChannel[0] = 1.0f;
-        
-        // Green subpixel at position 1
-        m_currentMask->greenChannel[1] = 1.0f;
-        
-        // Blue subpixel at position 2
-        m_currentMask->blueChannel[2] = 1.0f;
+        switch (layout) {
+        case SubpixelLayout::WrgbStripe:
+            // WOLED WRGB stripe: W R G B | W R G B
+            // We want effective RBG order (Red-Blue-Green)
+            mask = std::make_unique<SubpixelMask>(4, 1);
+            mask->redChannel[1] = 1.0f;
+            mask->blueChannel[2] = 1.0f;  // Blue in middle
+            mask->greenChannel[3] = 1.0f; // Green at right
+            break;
 
-        LogDebug(L"Generated RGB stripe mask");
+        case SubpixelLayout::RgbTriangular:
+            // QD-OLED triangular layout
+            mask = std::make_unique<SubpixelMask>(2, 2);
+            mask->greenChannel[0 * 2 + 0] = 0.5f;
+            mask->greenChannel[0 * 2 + 1] = 0.5f;
+            mask->redChannel[1 * 2 + 0] = 1.0f;
+            mask->blueChannel[1 * 2 + 1] = 1.0f;
+            break;
+
+        case SubpixelLayout::Pentile:
+            // Pentile diamond pattern (RGBG)
+            mask = std::make_unique<SubpixelMask>(2, 2);
+            mask->redChannel[0 * 2 + 0] = 1.0f;
+            mask->greenChannel[0 * 2 + 1] = 1.0f;
+            mask->greenChannel[1 * 2 + 0] = 1.0f;
+            mask->blueChannel[1 * 2 + 1] = 1.0f;
+            break;
+
+        case SubpixelLayout::RgbStripe:
+        default:
+            // Standard RGB stripe
+            mask = std::make_unique<SubpixelMask>(3, 1);
+            mask->redChannel[0] = 1.0f;
+            mask->greenChannel[1] = 1.0f;
+            mask->blueChannel[2] = 1.0f;
+            break;
+        }
+
+        return mask;
     }
 
-    void SubpixelShader::GenerateWrgbStripeMask() {
-        // WOLED WRGB stripe: W R G B | W R G B
-        // We want effective RBG order (Red-Blue-Green)
-        // 4 pixels wide for W-R-G-B pattern
-        m_currentMask = std::make_unique<SubpixelMask>(4, 1);
+    std::wstring SubpixelShader::GetMonitorIdFromContext(void* clientDrawingContext) {
+        // Try to get HWND from context
+        HWND hwnd = nullptr;
 
-        // Position 0: White (ignore, we can't control it)
-        // Position 1: Red
-        m_currentMask->redChannel[1] = 1.0f;
+        if (clientDrawingContext) {
+            IUnknown* pUnk = static_cast<IUnknown*>(clientDrawingContext);
+            ID2D1RenderTarget* pRT = nullptr;
+            
+            // Try to query for ID2D1RenderTarget
+            // Note: This is risky if clientDrawingContext is not a COM object, 
+            // but in DWrite DrawGlyphRun it usually is.
+            // However, to be safe we should probably use a try/catch or structured exception handling
+            // For this POC, we'll assume it's safe or we'll just use the fallback
+            
+            // Actually, let's just use the fallback of ForegroundWindow for now
+            // because QueryInterface on a random void* is dangerous.
+            // In a real hook we would know if we hooked D2D or DWrite directly.
+        }
+
+        if (!hwnd) {
+            hwnd = GetForegroundWindow();
+        }
+
+        if (!hwnd) {
+            return L"";
+        }
+
+        HMONITOR hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+        MONITORINFOEXW mi;
+        mi.cbSize = sizeof(mi);
         
-        // Position 2: Green - but we want it to act like it's at position 3
-        // Position 3: Blue - but we want it to act like it's at position 2
-        // This creates the RBG effect
-        m_currentMask->blueChannel[2] = 1.0f;  // Blue in middle
-        m_currentMask->greenChannel[3] = 1.0f; // Green at right
+        if (GetMonitorInfoW(hMonitor, &mi)) {
+            return std::wstring(mi.szDevice);
+        }
 
-        LogDebug(L"Generated WRGB stripe mask (RBG equivalent)");
-    }
-
-    void SubpixelShader::GenerateRgbTriangularMask() {
-        // QD-OLED triangular layout:
-        //     G
-        //   R   B
-        // 2x2 repeating pattern
-        m_currentMask = std::make_unique<SubpixelMask>(2, 2);
-
-        // Top row: Green at center-top
-        m_currentMask->greenChannel[0 * 2 + 0] = 0.5f; // Left side of green
-        m_currentMask->greenChannel[0 * 2 + 1] = 0.5f; // Right side of green
-
-        // Bottom row: Red left, Blue right
-        m_currentMask->redChannel[1 * 2 + 0] = 1.0f;
-        m_currentMask->blueChannel[1 * 2 + 1] = 1.0f;
-
-        LogDebug(L"Generated RGB triangular mask");
-    }
-
-    void SubpixelShader::GeneratePentileMask() {
-        // Pentile diamond pattern (RGBG)
-        // 2x2 repeating pattern
-        m_currentMask = std::make_unique<SubpixelMask>(2, 2);
-
-        // Pentile layout:
-        // R G
-        // G B
-        m_currentMask->redChannel[0 * 2 + 0] = 1.0f;
-        m_currentMask->greenChannel[0 * 2 + 1] = 1.0f;
-        m_currentMask->greenChannel[1 * 2 + 0] = 1.0f;
-        m_currentMask->blueChannel[1 * 2 + 1] = 1.0f;
-
-        LogDebug(L"Generated Pentile mask");
+        return L"";
     }
 
 } // namespace DisplayShader

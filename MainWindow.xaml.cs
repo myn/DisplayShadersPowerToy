@@ -7,6 +7,10 @@ using System.Windows.Threading;
 using DisplayShadersPowerToy.Models;
 using DisplayShadersPowerToy.Services;
 using Hardcodet.Wpf.TaskbarNotification;
+using WinForms = System.Windows.Forms;
+using System.Collections.ObjectModel;
+using System.Windows.Media;
+using System.Windows.Input;
 
 namespace DisplayShadersPowerToy;
 
@@ -22,6 +26,9 @@ public partial class MainWindow : Window
     private DispatcherTimer? _statusUpdateTimer;
     private bool _isInitializing = true;
     private TaskbarIcon? _notifyIcon;
+
+    public ObservableCollection<MonitorViewModel> Monitors { get; set; } = new ObservableCollection<MonitorViewModel>();
+    private MonitorViewModel? _selectedMonitor;
 
     public MainWindow()
     {
@@ -58,8 +65,105 @@ public partial class MainWindow : Window
 
     private void InitializeUI()
     {
+        // Initialize Monitors
+        RefreshMonitors();
+
+        // Set toggles
+        toggleQuickEnable.IsChecked = _currentSettings.EnableShaderInjection;
+        toggleAutoInject.IsChecked = _currentSettings.EnableShaderInjection;
+        UpdateToggleStatusDisplay();
+        cbStartWithWindows.IsChecked = _currentSettings.StartWithWindows;
+        cbMinimizeToTray.IsChecked = _currentSettings.MinimizeToTray;
+
+        // Set log path
+        txtLogPath.Text = Helpers.DiagnosticLogger.GetLogFilePath();
+    }
+
+    private void RefreshMonitors()
+    {
+        Monitors.Clear();
+        var screens = WinForms.Screen.AllScreens;
+        
+        // Calculate bounding box of all screens to normalize coordinates for UI
+        int minX = screens.Min(s => s.Bounds.X);
+        int minY = screens.Min(s => s.Bounds.Y);
+        int maxX = screens.Max(s => s.Bounds.Right);
+        int maxY = screens.Max(s => s.Bounds.Bottom);
+        
+        double totalWidth = maxX - minX;
+        double totalHeight = maxY - minY;
+        
+        // UI area for monitors (increased width to fill container)
+        double uiWidth = 750;
+        double uiHeight = 200;
+        
+        // Calculate scale to fit within UI area
+        double scale = Math.Min(uiWidth / totalWidth, uiHeight / totalHeight) * 0.85;
+
+        // Calculate centered offsets
+        double scaledTotalWidth = totalWidth * scale;
+        double scaledTotalHeight = totalHeight * scale;
+        double offsetX = (uiWidth - scaledTotalWidth) / 2;
+        double offsetY = (uiHeight - scaledTotalHeight) / 2;
+
+        for (int i = 0; i < screens.Length; i++)
+        {
+            var screen = screens[i];
+            var monitor = new MonitorViewModel
+            {
+                DeviceName = screen.DeviceName,
+                FriendlyName = $"Display {i + 1}",
+                Index = i + 1,
+                IsPrimary = screen.Primary,
+                Bounds = new Rect(screen.Bounds.X, screen.Bounds.Y, screen.Bounds.Width, screen.Bounds.Height),
+                Left = (screen.Bounds.X - minX) * scale + offsetX + 20, // +20 for padding
+                Top = (screen.Bounds.Y - minY) * scale + offsetY + 20,
+                Width = screen.Bounds.Width * scale,
+                Height = screen.Bounds.Height * scale
+            };
+            
+            Monitors.Add(monitor);
+        }
+
+        icMonitors.ItemsSource = Monitors;
+
+        // Select primary or first monitor
+        var primary = Monitors.FirstOrDefault(m => m.IsPrimary) ?? Monitors.FirstOrDefault();
+        if (primary != null)
+        {
+            SelectMonitor(primary);
+        }
+    }
+
+    private void SelectMonitor(MonitorViewModel monitor)
+    {
+        if (_selectedMonitor != null) _selectedMonitor.IsSelected = false;
+        _selectedMonitor = monitor;
+        if (_selectedMonitor != null) _selectedMonitor.IsSelected = true;
+
+        UpdateControlsForSelectedMonitor();
+    }
+
+    private void UpdateControlsForSelectedMonitor()
+    {
+        if (_selectedMonitor == null) return;
+
+        // Get settings for this monitor
+        if (!_currentSettings.MonitorSettings.TryGetValue(_selectedMonitor.DeviceName, out var settings))
+        {
+            // If no settings for this monitor, use default/legacy settings
+            settings = new MonitorSettings 
+            { 
+                ShaderLayout = _currentSettings.ShaderLayout,
+                ShaderIntensity = _currentSettings.ShaderIntensity
+            };
+            _currentSettings.MonitorSettings[_selectedMonitor.DeviceName] = settings;
+        }
+
+        _isInitializing = true; // Prevent triggering change events
+
         // Set display type
-        switch (_currentSettings.ShaderLayout)
+        switch (settings.ShaderLayout)
         {
             case SubpixelLayout.RgbStripe:
                 rbDisplayRgbLcd.IsChecked = true;
@@ -76,18 +180,58 @@ public partial class MainWindow : Window
         }
 
         // Set intensity
-        sliderIntensity.Value = _currentSettings.ShaderIntensity;
+        sliderIntensity.Value = settings.ShaderIntensity;
         UpdateIntensityDisplay();
 
-        // Set toggles
-        toggleQuickEnable.IsChecked = _currentSettings.EnableShaderInjection;
-        toggleAutoInject.IsChecked = _currentSettings.EnableShaderInjection;
-        UpdateToggleStatusDisplay();
-        cbStartWithWindows.IsChecked = _currentSettings.StartWithWindows;
-        cbMinimizeToTray.IsChecked = _currentSettings.MinimizeToTray;
+        _isInitializing = false;
+        
+        txtConfigHeader.Text = $"{_selectedMonitor.FriendlyName} Configuration";
+    }
 
-        // Set log path
-        txtLogPath.Text = Helpers.DiagnosticLogger.GetLogFilePath();
+    private void Monitor_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is Border border && border.DataContext is MonitorViewModel monitor)
+        {
+            SelectMonitor(monitor);
+        }
+    }
+
+    private void Identify_Click(object sender, RoutedEventArgs e)
+    {
+        foreach (var screen in WinForms.Screen.AllScreens)
+        {
+            var idWindow = new Window
+            {
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = System.Windows.Media.Brushes.Transparent,
+                Topmost = true,
+                ShowInTaskbar = false,
+                Left = screen.Bounds.Left,
+                Top = screen.Bounds.Top,
+                Width = screen.Bounds.Width,
+                Height = screen.Bounds.Height,
+                Content = new Border 
+                { 
+                    Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(200, 0, 0, 0)),
+                    Child = new TextBlock 
+                    { 
+                        Text = (Array.IndexOf(WinForms.Screen.AllScreens, screen) + 1).ToString(),
+                        FontSize = 200,
+                        Foreground = System.Windows.Media.Brushes.White,
+                        HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                        VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                        FontWeight = FontWeights.Bold
+                    }
+                }
+            };
+            idWindow.Show();
+            
+            // Close after 3 seconds
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+            timer.Tick += (s, ev) => { idWindow.Close(); timer.Stop(); };
+            timer.Start();
+        }
     }
 
     private void SetupSystemTray()
@@ -237,16 +381,30 @@ public partial class MainWindow : Window
     {
         if (_isInitializing) return;
 
-        if (rbDisplayRgbLcd.IsChecked == true)
-            _currentSettings.ShaderLayout = SubpixelLayout.RgbStripe;
-        else if (rbDisplayWoled.IsChecked == true)
-            _currentSettings.ShaderLayout = SubpixelLayout.WrgbStripe;
-        else if (rbDisplayQdOled.IsChecked == true)
-            _currentSettings.ShaderLayout = SubpixelLayout.RgbTriangular;
-        else if (rbDisplayPentile.IsChecked == true)
-            _currentSettings.ShaderLayout = SubpixelLayout.Pentile;
+        SubpixelLayout layout = SubpixelLayout.RgbStripe;
+        if (rbDisplayRgbLcd.IsChecked == true) layout = SubpixelLayout.RgbStripe;
+        else if (rbDisplayWoled.IsChecked == true) layout = SubpixelLayout.WrgbStripe;
+        else if (rbDisplayQdOled.IsChecked == true) layout = SubpixelLayout.RgbTriangular;
+        else if (rbDisplayPentile.IsChecked == true) layout = SubpixelLayout.Pentile;
 
-        Helpers.DiagnosticLogger.Log("UI", $"Display type changed to: {_currentSettings.ShaderLayout}");
+        // Update selected monitor settings
+        if (_selectedMonitor != null)
+        {
+            if (!_currentSettings.MonitorSettings.TryGetValue(_selectedMonitor.DeviceName, out var settings))
+            {
+                settings = new MonitorSettings();
+                _currentSettings.MonitorSettings[_selectedMonitor.DeviceName] = settings;
+            }
+            settings.ShaderLayout = layout;
+            
+            // Also update global legacy settings if this is primary
+            if (_selectedMonitor.IsPrimary)
+            {
+                _currentSettings.ShaderLayout = layout;
+            }
+        }
+
+        Helpers.DiagnosticLogger.Log("UI", $"Display type changed to: {layout} for monitor {_selectedMonitor?.FriendlyName}");
         ApplySettings();
     }
 
@@ -254,10 +412,27 @@ public partial class MainWindow : Window
     {
         if (_isInitializing) return;
 
-        _currentSettings.ShaderIntensity = sliderIntensity.Value;
+        double intensity = sliderIntensity.Value;
         UpdateIntensityDisplay();
         
-        Helpers.DiagnosticLogger.Log("UI", $"Intensity changed to: {_currentSettings.ShaderIntensity:F2}");
+        // Update selected monitor settings
+        if (_selectedMonitor != null)
+        {
+            if (!_currentSettings.MonitorSettings.TryGetValue(_selectedMonitor.DeviceName, out var settings))
+            {
+                settings = new MonitorSettings();
+                _currentSettings.MonitorSettings[_selectedMonitor.DeviceName] = settings;
+            }
+            settings.ShaderIntensity = intensity;
+
+            // Also update global legacy settings if this is primary
+            if (_selectedMonitor.IsPrimary)
+            {
+                _currentSettings.ShaderIntensity = intensity;
+            }
+        }
+        
+        Helpers.DiagnosticLogger.Log("UI", $"Intensity changed to: {intensity:F2} for monitor {_selectedMonitor?.FriendlyName}");
         ApplySettings();
     }
 
@@ -333,9 +508,9 @@ public partial class MainWindow : Window
             "?? WARNING: Force Eject DLLs ??\n\n" +
             "This will forcibly unload DisplayShaderHook.dll from all hooked processes.\n\n" +
             "CONSEQUENCES:\n" +
-            "• Applications will likely crash or freeze\n" +
-            "• You may lose unsaved work\n" +
-            "• Windows Explorer may need to restart\n\n" +
+            "ï¿½ Applications will likely crash or freeze\n" +
+            "ï¿½ You may lose unsaved work\n" +
+            "ï¿½ Windows Explorer may need to restart\n\n" +
             "Only proceed if you need to rebuild or delete the DLL files during development.\n\n" +
             "Do you want to continue?",
             "Developer Tool - Force Eject DLLs",
@@ -405,4 +580,29 @@ public partial class MainWindow : Window
         _notifyIcon = null;
         base.OnClosed(e);
     }
+}
+
+public class MonitorViewModel : System.ComponentModel.INotifyPropertyChanged
+{
+    public string DeviceName { get; set; } = "";
+    public string FriendlyName { get; set; } = "";
+    public int Index { get; set; }
+    public bool IsPrimary { get; set; }
+    public Rect Bounds { get; set; }
+    
+    // For UI scaling/positioning
+    public double Left { get; set; }
+    public double Top { get; set; }
+    public double Width { get; set; }
+    public double Height { get; set; }
+    
+    private bool _isSelected;
+    public bool IsSelected 
+    { 
+        get => _isSelected; 
+        set { _isSelected = value; OnPropertyChanged(nameof(IsSelected)); } 
+    }
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged(string name) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
 }

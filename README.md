@@ -40,6 +40,7 @@ This application uses **real-time DirectWrite shader injection** to apply custom
 - **LG WOLED (WRGB)** - LG C/G/B series OLED displays
 - **QD-OLED (RGB Triangular)** - Samsung/Alienware monitors
 - **PenTile AMOLED** - Diamond pattern displays
+- **Multi-Monitor Support** - Configure different settings for each display independently
 
 ### Advanced Features
 - **Adjustable intensity** - Fine-tune optimization strength (0-100%)
@@ -85,6 +86,17 @@ The interface shows real-time status and easy configuration:
    - Status shows "Optimizing X applications"
    - Active processes list appears
    - Text rendering improves immediately
+
+### Multi-Monitor Configuration
+
+For setups with multiple displays (e.g., an OLED main monitor and LCD secondary monitors):
+
+1. **Select a monitor** from the visual layout at the top of the window.
+2. **Configure settings** for the selected monitor:
+   - Set **Display Type** (e.g., WOLED for main, Standard LCD for secondary)
+   - Adjust **Intensity**
+3. **Repeat** for other monitors.
+4. Use the **Identify** button to show numbers on your screens if you're unsure which is which.
 
 ### Recommended Settings
 

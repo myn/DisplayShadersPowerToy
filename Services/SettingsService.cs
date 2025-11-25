@@ -75,6 +75,24 @@ public class SettingsService
                 // Save application settings
                 key.SetValue("StartWithWindows", settings.StartWithWindows ? 1 : 0);
                 key.SetValue("MinimizeToTray", settings.MinimizeToTray ? 1 : 0);
+
+                // Save per-monitor settings
+                using var monitorsKey = key.CreateSubKey("Monitors");
+                if (monitorsKey != null)
+                {
+                    foreach (var monitor in settings.MonitorSettings)
+                    {
+                        // Registry keys can't contain backslashes, so we encode the monitor ID
+                        // Monitor IDs are like \\.\DISPLAY1, so we replace \ with #
+                        string safeKeyName = monitor.Key.Replace('\\', '#');
+                        using var monitorKey = monitorsKey.CreateSubKey(safeKeyName);
+                        if (monitorKey != null)
+                        {
+                            monitorKey.SetValue("ShaderLayout", (int)monitor.Value.ShaderLayout);
+                            monitorKey.SetValue("ShaderIntensity", monitor.Value.ShaderIntensity);
+                        }
+                    }
+                }
             }
         }
         catch (Exception ex)
@@ -125,6 +143,32 @@ public class SettingsService
                 if (minimizeToTray != null)
                 {
                     settings.MinimizeToTray = Convert.ToInt32(minimizeToTray) == 1;
+                }
+
+                // Load per-monitor settings
+                using var monitorsKey = key.OpenSubKey("Monitors");
+                if (monitorsKey != null)
+                {
+                    foreach (var monitorKeyName in monitorsKey.GetSubKeyNames())
+                    {
+                        using var monitorKey = monitorsKey.OpenSubKey(monitorKeyName);
+                        if (monitorKey != null)
+                        {
+                            var monitorSettings = new Models.MonitorSettings();
+                            
+                            var mLayout = monitorKey.GetValue("ShaderLayout");
+                            if (mLayout != null)
+                                monitorSettings.ShaderLayout = (Models.SubpixelLayout)Convert.ToInt32(mLayout);
+                                
+                            var mIntensity = monitorKey.GetValue("ShaderIntensity");
+                            if (mIntensity != null)
+                                monitorSettings.ShaderIntensity = Convert.ToDouble(mIntensity);
+
+                            // Decode monitor ID
+                            string monitorId = monitorKeyName.Replace('#', '\\');
+                            settings.MonitorSettings[monitorId] = monitorSettings;
+                        }
+                    }
                 }
             }
         }
