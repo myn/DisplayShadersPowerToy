@@ -71,6 +71,7 @@ public partial class MainWindow : Window
         // Set toggles
         toggleQuickEnable.IsChecked = _currentSettings.EnableShaderInjection;
         toggleAutoInject.IsChecked = _currentSettings.EnableShaderInjection;
+        toggleClearType.IsChecked = _currentSettings.EnableClearType;
         UpdateToggleStatusDisplay();
         cbStartWithWindows.IsChecked = _currentSettings.StartWithWindows;
         cbMinimizeToTray.IsChecked = _currentSettings.MinimizeToTray;
@@ -287,6 +288,13 @@ public partial class MainWindow : Window
     {
         Helpers.DiagnosticLogger.Log("MainWindow", "Applying settings...");
         
+        // Sync ClearType layout with shader layout if ClearType is enabled
+        if (_currentSettings.EnableClearType)
+        {
+            _currentSettings.ClearTypeLayout = _currentSettings.ShaderLayout;
+            _currentSettings.ClearTypeIntensity = _currentSettings.ShaderIntensity;
+        }
+        
         // Apply via service
         _displayShaderService.ApplyShaderSettings(_currentSettings);
         
@@ -445,6 +453,20 @@ public partial class MainWindow : Window
         UpdateToggleStatusDisplay();
         
         Helpers.DiagnosticLogger.Log("UI", $"Auto-inject toggled: {_currentSettings.EnableShaderInjection}");
+        ApplySettings();
+    }
+
+    private void ClearType_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        _currentSettings.EnableClearType = toggleClearType.IsChecked == true;
+        
+        // Sync ClearType layout with shader layout
+        _currentSettings.ClearTypeLayout = _currentSettings.ShaderLayout;
+        _currentSettings.ClearTypeIntensity = _currentSettings.ShaderIntensity;
+        
+        Helpers.DiagnosticLogger.Log("UI", $"ClearType toggled: {_currentSettings.EnableClearType}");
         ApplySettings();
     }
 

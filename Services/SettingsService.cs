@@ -72,6 +72,11 @@ public class SettingsService
                 key.SetValue("ShaderLayout", (int)settings.ShaderLayout);
                 key.SetValue("ShaderIntensity", settings.ShaderIntensity);
                 
+                // Save ClearType settings
+                key.SetValue("EnableClearType", settings.EnableClearType ? 1 : 0);
+                key.SetValue("ClearTypeLayout", (int)settings.ClearTypeLayout);
+                key.SetValue("ClearTypeIntensity", settings.ClearTypeIntensity);
+                
                 // Save application settings
                 key.SetValue("StartWithWindows", settings.StartWithWindows ? 1 : 0);
                 key.SetValue("MinimizeToTray", settings.MinimizeToTray ? 1 : 0);
@@ -130,6 +135,25 @@ public class SettingsService
                 if (shaderIntensity != null)
                 {
                     settings.ShaderIntensity = Convert.ToDouble(shaderIntensity);
+                }
+
+                // Load ClearType settings
+                var enableClearType = key.GetValue("EnableClearType");
+                if (enableClearType != null)
+                {
+                    settings.EnableClearType = Convert.ToInt32(enableClearType) == 1;
+                }
+
+                var clearTypeLayout = key.GetValue("ClearTypeLayout");
+                if (clearTypeLayout != null)
+                {
+                    settings.ClearTypeLayout = (Models.SubpixelLayout)Convert.ToInt32(clearTypeLayout);
+                }
+
+                var clearTypeIntensity = key.GetValue("ClearTypeIntensity");
+                if (clearTypeIntensity != null)
+                {
+                    settings.ClearTypeIntensity = Convert.ToDouble(clearTypeIntensity);
                 }
 
                 // Load application settings

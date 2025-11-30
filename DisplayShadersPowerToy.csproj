@@ -13,7 +13,15 @@
 		<Authors>Display Shaders PowerToy Contributors</Authors>
 		<Product>Display Shaders PowerToy</Product>
 		<Description>Real display shader support for OLED text rendering with DirectWrite hooks</Description>
+		<EnableWindowsTargeting>true</EnableWindowsTargeting>
 	</PropertyGroup>
+
+	<!-- Exclude Tests folder from main compilation -->
+	<ItemGroup>
+		<Compile Remove="Tests\**" />
+		<EmbeddedResource Remove="Tests\**" />
+		<None Remove="Tests\**" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
