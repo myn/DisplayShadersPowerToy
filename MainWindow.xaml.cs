@@ -289,11 +289,7 @@ public partial class MainWindow : Window
         Helpers.DiagnosticLogger.Log("MainWindow", "Applying settings...");
         
         // Sync ClearType layout with shader layout if ClearType is enabled
-        if (_currentSettings.EnableClearType)
-        {
-            _currentSettings.ClearTypeLayout = _currentSettings.ShaderLayout;
-            _currentSettings.ClearTypeIntensity = _currentSettings.ShaderIntensity;
-        }
+        SyncClearTypeWithShaderSettings();
         
         // Apply via service
         _displayShaderService.ApplyShaderSettings(_currentSettings);
@@ -303,6 +299,19 @@ public partial class MainWindow : Window
         
         // Update status
         UpdateQuickStatus();
+    }
+
+    /// <summary>
+    /// Synchronizes ClearType settings with shader settings
+    /// ClearType layout and intensity follow the shader settings when ClearType is enabled
+    /// </summary>
+    private void SyncClearTypeWithShaderSettings()
+    {
+        if (_currentSettings.EnableClearType)
+        {
+            _currentSettings.ClearTypeLayout = _currentSettings.ShaderLayout;
+            _currentSettings.ClearTypeIntensity = _currentSettings.ShaderIntensity;
+        }
     }
 
     private void StartStatusUpdates()
@@ -462,9 +471,7 @@ public partial class MainWindow : Window
 
         _currentSettings.EnableClearType = toggleClearType.IsChecked == true;
         
-        // Sync ClearType layout with shader layout
-        _currentSettings.ClearTypeLayout = _currentSettings.ShaderLayout;
-        _currentSettings.ClearTypeIntensity = _currentSettings.ShaderIntensity;
+        // Note: SyncClearTypeWithShaderSettings will be called in ApplySettings
         
         Helpers.DiagnosticLogger.Log("UI", $"ClearType toggled: {_currentSettings.EnableClearType}");
         ApplySettings();
