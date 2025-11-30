@@ -8,11 +8,11 @@ namespace DisplayShadersPowerToy.Services;
 /// Service for managing ClearType settings AND actual display shaders
 /// 
 /// DUAL MODE OPERATION:
-/// - Legacy Mode: Adjusts Windows ClearType registry settings (workaround)
-/// - Shader Mode: Uses real DirectWrite/D3D hooks with custom shaders (proper fix)
+/// - ClearType Mode: Adjusts Windows ClearType registry settings (user-selectable)
+/// - Shader Mode: Uses real DirectWrite/D3D hooks with custom shaders (user-selectable)
 /// 
-/// The shader mode requires DisplayShaderHook.dll to be present and injected
-/// into target processes. If not available, falls back to ClearType mode.
+/// Both modes can be enabled/disabled independently by the user.
+/// The shader mode requires DisplayShaderHook.dll to be present and injected into target processes.
 /// 
 /// See docs/TECHNICAL_LIMITATIONS.md and docs/DEVELOPER.md for details.
 /// </summary>
@@ -74,7 +74,7 @@ public class DisplayShaderService : IDisposable
         }
         else
         {
-            System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Hook DLL not available, falling back to ClearType mode");
+            System.Diagnostics.Debug.WriteLine("[DisplayShaderService] Hook DLL not available - shader injection will not be available");
         }
     }
 
@@ -99,7 +99,7 @@ public class DisplayShaderService : IDisposable
     {
         if (!_shaderModeAvailable)
         {
-            return "Shader Mode: Not Available (using ClearType fallback)";
+            return "Shader Mode: Not Available (ClearType can still be used)";
         }
 
         int version = ShaderService.GetHookVersion();
@@ -210,7 +210,7 @@ public class DisplayShaderService : IDisposable
     }
 
     /// <summary>
-    /// Apply ClearType registry settings as a fallback or complement
+    /// Apply ClearType registry settings (independent option, not a fallback)
     /// </summary>
     private void ApplyLegacyClearTypeSettings(DisplaySettings settings)
     {
