@@ -23,14 +23,28 @@ public class UIAndVisualValidationTests : IDisposable
     private const string FontSmoothingOrientationKey = "FontSmoothingOrientation";
     private const string FontSmoothingGammaKey = "FontSmoothingGamma";
 
+    /// <summary>
+    /// Minimum number of color-varied pixels required to detect ClearType subpixel rendering.
+    /// This threshold accounts for the fact that ClearType creates subtle color variations
+    /// at text edges - even a small amount of variation indicates active subpixel rendering.
+    /// </summary>
+    private const int SubpixelColorVariationThreshold = 10;
+
     // Store original values to restore after tests
     private string? _originalFontSmoothing;
     private int? _originalFontSmoothingType;
     private int? _originalFontSmoothingOrientation;
     private int? _originalFontSmoothingGamma;
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+    // SystemParametersInfo P/Invoke declarations with different parameter types
+    [DllImport("user32.dll", SetLastError = true, EntryPoint = "SystemParametersInfo")]
+    private static extern bool SystemParametersInfoIntPtr(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+
+    [DllImport("user32.dll", SetLastError = true, EntryPoint = "SystemParametersInfo")]
+    private static extern bool SystemParametersInfoRefIntPtr(uint uiAction, uint uiParam, ref IntPtr pvParam, uint fWinIni);
+
+    [DllImport("user32.dll", SetLastError = true, EntryPoint = "SystemParametersInfo")]
+    private static extern bool SystemParametersInfoRefUint(uint uiAction, uint uiParam, ref uint pvParam, uint fWinIni);
 
     private const uint SPI_GETFONTSMOOTHING = 0x004A;
     private const uint SPI_SETFONTSMOOTHING = 0x004B;
@@ -68,9 +82,11 @@ public class UIAndVisualValidationTests : IDisposable
                 _originalFontSmoothingGamma = key.GetValue(FontSmoothingGammaKey) as int?;
             }
         }
-        catch
+        catch (Exception)
         {
-            // Ignore errors during save - will use defaults
+            // Registry access may fail due to permissions or non-Windows environment.
+            // Tests will still run but won't be able to restore original settings.
+            // This is acceptable for test cleanup - the restore attempt is best-effort.
         }
     }
 
@@ -91,11 +107,13 @@ public class UIAndVisualValidationTests : IDisposable
                     key.SetValue(FontSmoothingGammaKey, _originalFontSmoothingGamma.Value, RegistryValueKind.DWord);
             }
             // Notify system of changes
-            SystemParametersInfo(SPI_SETFONTSMOOTHING, 0, IntPtr.Zero, SPIF_SENDCHANGE);
+            SystemParametersInfoIntPtr(SPI_SETFONTSMOOTHING, 0, IntPtr.Zero, SPIF_SENDCHANGE);
         }
-        catch
+        catch (Exception)
         {
-            // Ignore errors during restore
+            // Registry restore may fail due to permissions or non-Windows environment.
+            // This is acceptable for test cleanup - the restore attempt is best-effort.
+            // Original settings cannot be restored but tests have already completed.
         }
     }
 
@@ -195,15 +213,12 @@ public class UIAndVisualValidationTests : IDisposable
         IntPtr result = IntPtr.Zero;
 
         // Act
-        bool success = SystemParametersInfo(SPI_GETFONTSMOOTHING, 0, ref result, 0);
+        bool success = SystemParametersInfoRefIntPtr(SPI_GETFONTSMOOTHING, 0, ref result, 0);
 
         // Assert - Should succeed and return 0 or non-zero
         Assert.True(success || Marshal.GetLastWin32Error() == 0, 
             $"SystemParametersInfo failed with error: {Marshal.GetLastWin32Error()}");
     }
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref IntPtr pvParam, uint fWinIni);
 
     /// <summary>
     /// Validates that SystemParametersInfo can get font smoothing type
@@ -215,16 +230,13 @@ public class UIAndVisualValidationTests : IDisposable
         uint result = 0;
 
         // Act
-        bool success = SystemParametersInfo(SPI_GETFONTSMOOTHINGTYPE, 0, ref result, 0);
+        bool success = SystemParametersInfoRefUint(SPI_GETFONTSMOOTHINGTYPE, 0, ref result, 0);
 
         // Assert
         Assert.True(success || Marshal.GetLastWin32Error() == 0);
         // Valid values are 0 (standard), 1 (standard), 2 (ClearType)
         Assert.True(result <= 2, $"Unexpected font smoothing type: {result}");
     }
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref uint pvParam, uint fWinIni);
 
     #endregion
 
@@ -389,7 +401,7 @@ public class UIAndVisualValidationTests : IDisposable
         Assert.NotNull(key);
         key.SetValue(FontSmoothingKey, "2", RegistryValueKind.String);
         key.SetValue(FontSmoothingTypeKey, 2, RegistryValueKind.DWord);
-        SystemParametersInfo(SPI_SETFONTSMOOTHING, 1, IntPtr.Zero, SPIF_SENDCHANGE);
+        SystemParametersInfoIntPtr(SPI_SETFONTSMOOTHING, 1, IntPtr.Zero, SPIF_SENDCHANGE);
 
         // Act - Create a bitmap and render text
         using var bitmap = new Bitmap(200, 50);
@@ -509,8 +521,8 @@ public class UIAndVisualValidationTests : IDisposable
             }
         }
         
-        // If we found color variation, ClearType subpixel rendering is active
-        return colorVariationCount > 10; // Threshold for detection
+        // If we found color variation above the threshold, ClearType subpixel rendering is active
+        return colorVariationCount > SubpixelColorVariationThreshold;
     }
 
     #endregion
