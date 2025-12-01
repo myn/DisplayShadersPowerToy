@@ -15,7 +15,7 @@ using System.Windows.Input;
 namespace DisplayShadersPowerToy;
 
 /// <summary>
-/// Modern, reimagined UI for OLED Text Optimizer
+/// Modern, reimagined UI for Display Shaders PowerToy
 /// Simplified, cohesive design focused on the core functionality
 /// </summary>
 public partial class MainWindow : Window
@@ -267,7 +267,7 @@ public partial class MainWindow : Window
         {
             _notifyIcon = new TaskbarIcon();
             _notifyIcon.Icon = Helpers.IconGenerator.GenerateTrayIcon();
-            _notifyIcon.ToolTipText = "OLED Text Optimizer";
+            _notifyIcon.ToolTipText = "Display Shaders PowerToy";
             
             // Double-click to show window
             _notifyIcon.TrayMouseDoubleClick += (s, e) =>

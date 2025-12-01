@@ -1,8 +1,8 @@
-# Developer Guide - OLED Text Optimizer
+# Developer Guide - Display Shaders PowerToy
 
 ## Project Overview
 
-OLED Text Optimizer is a .NET 8 WPF application that fixes text rendering issues on OLED displays using real-time DirectWrite shader injection.
+Display Shaders PowerToy is a .NET 8 WPF application that fixes text rendering issues on OLED displays using real-time DirectWrite shader injection.
 
 ### Architecture
 

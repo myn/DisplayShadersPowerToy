@@ -1,12 +1,12 @@
-# OLED Text Optimizer
+# Display Shaders PowerToy
 
 **Crystal-clear text rendering for modern OLED displays through real-time shader injection**
 
-![OLED Text Optimizer](Screenshot%202025-11-17%20135100.png)
+![Display Shaders PowerToy](Screenshot%202025-11-17%20135100.png)
 
 ## What is This?
 
-OLED Text Optimizer is a Windows utility that fixes text rendering issues on modern OLED displays using **real-time DirectWrite shader injection** with custom HLSL pixel shaders.
+Display Shaders PowerToy is a Windows utility that fixes text rendering issues on modern OLED displays using **real-time DirectWrite shader injection** with custom HLSL pixel shaders.
 
 ### The Problem
 
@@ -52,7 +52,7 @@ This application uses **real-time DirectWrite shader injection** to apply custom
 
 The interface shows real-time status and easy configuration:
 
-![OLED Text Optimizer Interface](Screenshot%202025-11-17%20135100.png)
+![Display Shaders PowerToy Interface](Screenshot%202025-11-17%20135100.png)
 
 **Key Elements:**
 - **Green status indicator** - Shows active optimization
@@ -66,7 +66,7 @@ The interface shows real-time status and easy configuration:
 ### Installation
 
 1. **Download** the latest release from [Releases](https://github.com/myn/DisplayShadersPowerToy/releases)
-2. **Extract** the files to a folder (e.g., `C:\Program Files\OLED Text Optimizer\`)
+2. **Extract** the files to a folder (e.g., `C:\Program Files\DisplayShadersPowerToy\`)
 3. **Run** `DisplayShadersPowerToy.exe`
 
 **Important:** The `DisplayShaderHook.dll` file must be present in the same directory as the executable.
@@ -112,7 +112,7 @@ For setups with multiple displays (e.g., an OLED main monitor and LCD secondary 
 
 ```
 +---------------------------------------------+
-|          OLED Text Optimizer                |
+|        Display Shaders PowerToy             |
 +---------------------------------------------+
 |                                             |
 |  Real-Time Shader Injection                 |
