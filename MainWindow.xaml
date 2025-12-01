@@ -438,6 +438,33 @@
                                          VerticalAlignment="Center"/>
                         </Grid>
 
+                        <!-- ClearType Optimization Toggle -->
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="ClearType Optimization" 
+                                          FontSize="13" 
+                                          FontWeight="SemiBold"/>
+                                <TextBlock Text="Adjust Windows ClearType settings based on display type (fallback mode)" 
+                                          FontSize="11"
+                                          Foreground="{StaticResource TextSecondary}"
+                                          Margin="0,2,0,0"
+                                          TextWrapping="Wrap"/>
+                            </StackPanel>
+                            
+                            <ToggleButton x:Name="toggleClearType"
+                                         Grid.Column="1"
+                                         Style="{StaticResource ModernToggle}"
+                                         IsChecked="True"
+                                         Checked="ClearType_Changed"
+                                         Unchecked="ClearType_Changed"
+                                         VerticalAlignment="Center"/>
+                        </Grid>
+
                         <Separator Margin="0,12,0,12"/>
 
                         <!-- Application Settings -->

@@ -7,6 +7,11 @@ public class DisplaySettings
     // Global Settings
     public bool EnableShaderInjection { get; set; } = true;
     
+    // ClearType (Registry) Settings - Optional fallback/complement to shader injection
+    public bool EnableClearType { get; set; } = true;
+    public SubpixelLayout ClearTypeLayout { get; set; } = SubpixelLayout.RgbStripe;
+    public double ClearTypeIntensity { get; set; } = 1.0;
+    
     // Per-Monitor Settings
     // Key: Monitor Device ID (e.g., "\\.\DISPLAY1"), Value: Settings for that monitor
     public Dictionary<string, MonitorSettings> MonitorSettings { get; set; } = new Dictionary<string, MonitorSettings>();

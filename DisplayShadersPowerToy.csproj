@@ -13,7 +13,15 @@
 		<Authors>Display Shaders PowerToy Contributors</Authors>
 		<Product>Display Shaders PowerToy</Product>
 		<Description>Real display shader support for OLED text rendering with DirectWrite hooks</Description>
+		<EnableWindowsTargeting>true</EnableWindowsTargeting>
 	</PropertyGroup>
+
+	<!-- Exclude Tests folder from main compilation -->
+	<ItemGroup>
+		<Compile Remove="Tests\**" />
+		<EmbeddedResource Remove="Tests\**" />
+		<None Remove="Tests\**" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
@@ -79,7 +87,7 @@
 
 		<!-- Log the final result -->
 		<Message Text="✓ Native DLL successfully copied to: $(OutputPath)DisplayShaderHook.dll" Condition="Exists('$(OutputPath)DisplayShaderHook.dll')" Importance="high" />
-		<Warning Text="⚠ Native DLL not found in any expected location. Searched:&#xA;  1. $(NativeDllPath)&#xA;  2. $(NativeDllPathRelease)&#xA;  3. $(NativeDllPath2)&#xA;  4. $(NativeDllPath3)&#xA;&#xA;Application will run in ClearType fallback mode.&#xA;&#xA;To build the DLL:&#xA;  1. Open Native\DisplayShaderHook\DisplayShaderHook.vcxproj in Visual Studio&#xA;  2. Build in Release configuration (x64)&#xA;  3. Rebuild this C# project" Condition="!Exists('$(OutputPath)DisplayShaderHook.dll')" />
+		<Warning Text="⚠ Native DLL not found in any expected location. Searched:&#xA;  1. $(NativeDllPath)&#xA;  2. $(NativeDllPathRelease)&#xA;  3. $(NativeDllPath2)&#xA;  4. $(NativeDllPath3)&#xA;&#xA;Shader injection will not be available. ClearType mode can still be used independently.&#xA;&#xA;To build the DLL:&#xA;  1. Open Native\DisplayShaderHook\DisplayShaderHook.vcxproj in Visual Studio&#xA;  2. Build in Release configuration (x64)&#xA;  3. Rebuild this C# project" Condition="!Exists('$(OutputPath)DisplayShaderHook.dll')" />
 	</Target>
 
 	<!-- Copy SubpixelMasks folder to output -->
