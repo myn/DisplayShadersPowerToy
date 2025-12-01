@@ -19,8 +19,11 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Restore dependencies
-      run: dotnet restore DisplayShadersPowerToy.sln
+    - name: Restore main project
+      run: dotnet restore DisplayShadersPowerToy.csproj
+
+    - name: Restore test project
+      run: dotnet restore Tests/DisplayShadersPowerToy.Tests.csproj
 
     - name: Build main project
       run: dotnet build DisplayShadersPowerToy.csproj --configuration Release --no-restore
@@ -51,11 +54,17 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Restore dependencies
-      run: dotnet restore DisplayShadersPowerToy.sln
+    - name: Restore main project
+      run: dotnet restore DisplayShadersPowerToy.csproj
 
-    - name: Build all projects
-      run: dotnet build DisplayShadersPowerToy.sln --configuration Release --no-restore
+    - name: Restore test project
+      run: dotnet restore Tests/DisplayShadersPowerToy.Tests.csproj
+
+    - name: Build main project
+      run: dotnet build DisplayShadersPowerToy.csproj --configuration Release --no-restore
+
+    - name: Build test project
+      run: dotnet build Tests/DisplayShadersPowerToy.Tests.csproj --configuration Release --no-restore
 
     - name: Run functional tests with Windows API access
       run: |
@@ -142,11 +151,17 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Restore dependencies
-      run: dotnet restore DisplayShadersPowerToy.sln
+    - name: Restore main project
+      run: dotnet restore DisplayShadersPowerToy.csproj
 
-    - name: Build all projects
-      run: dotnet build DisplayShadersPowerToy.sln --configuration Release --no-restore
+    - name: Restore test project
+      run: dotnet restore Tests/DisplayShadersPowerToy.Tests.csproj
+
+    - name: Build main project
+      run: dotnet build DisplayShadersPowerToy.csproj --configuration Release --no-restore
+
+    - name: Build test project
+      run: dotnet build Tests/DisplayShadersPowerToy.Tests.csproj --configuration Release --no-restore
 
     - name: Run UI and Visual Validation Tests
       run: |
