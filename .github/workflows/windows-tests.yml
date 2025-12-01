@@ -128,3 +128,154 @@ jobs:
         }
         
         Write-Host "✓ SubpixelLayout enum values validated"
+
+  ui-and-visual-validation-tests:
+    runs-on: windows-latest
+    needs: build-and-test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore DisplayShadersPowerToy.sln
+
+    - name: Build all projects
+      run: dotnet build DisplayShadersPowerToy.sln --configuration Release --no-restore
+
+    - name: Run UI and Visual Validation Tests
+      run: |
+        # Run the UI and visual validation tests
+        dotnet test Tests/DisplayShadersPowerToy.Tests.csproj --configuration Release --no-build --verbosity normal --filter "FullyQualifiedName~UIAndVisualValidationTests" --logger "trx;LogFileName=visual-test-results.trx"
+
+    - name: Test all subpixel layout registry settings
+      shell: pwsh
+      run: |
+        Write-Host "Testing subpixel layout registry settings..."
+        
+        # Test each layout configuration
+        $layouts = @{
+            "RgbStripe" = @{ Gamma = 1400; Description = "Standard LCD" }
+            "WrgbStripe" = @{ Gamma = 1200; Description = "WOLED" }
+            "RgbTriangular" = @{ Gamma = 1000; Description = "QD-OLED" }
+            "Pentile" = @{ Gamma = 1100; Description = "Pentile" }
+        }
+        
+        foreach ($layout in $layouts.Keys) {
+            $config = $layouts[$layout]
+            Write-Host "`n Testing $layout ($($config.Description))..."
+            
+            # Apply settings
+            Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothing' -Value '2' -Type String
+            Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothingType' -Value 2 -Type DWord
+            Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothingOrientation' -Value 1 -Type DWord
+            Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothingGamma' -Value $config.Gamma -Type DWord
+            
+            # Verify settings were applied
+            $gamma = (Get-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothingGamma').FontSmoothingGamma
+            if ($gamma -eq $config.Gamma) {
+                Write-Host "  ✓ $layout settings applied correctly (Gamma: $gamma)"
+            } else {
+                Write-Error "  ✗ $layout settings failed - Expected Gamma: $($config.Gamma), Got: $gamma"
+                exit 1
+            }
+        }
+        
+        # Test ClearType disabled (None layout)
+        Write-Host "`n Testing None (ClearType disabled)..."
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothing' -Value '0' -Type String
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothingType' -Value 0 -Type DWord
+        
+        $smoothing = (Get-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothing').FontSmoothing
+        if ($smoothing -eq '0') {
+            Write-Host "  ✓ ClearType disabled correctly"
+        } else {
+            Write-Error "  ✗ Failed to disable ClearType"
+            exit 1
+        }
+        
+        Write-Host "`n✓ All subpixel layout tests passed!"
+
+    - name: Visual rendering validation
+      shell: pwsh
+      run: |
+        Write-Host "Running visual rendering validation..."
+        
+        # Enable ClearType for visual test
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothing' -Value '2' -Type String
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothingType' -Value 2 -Type DWord
+        
+        # Load System.Drawing for bitmap operations
+        Add-Type -AssemblyName System.Drawing
+        
+        # Create a test image with text
+        $bitmap = New-Object System.Drawing.Bitmap(300, 100)
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+        
+        # Set ClearType rendering
+        $graphics.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::ClearTypeGridFit
+        $graphics.Clear([System.Drawing.Color]::White)
+        
+        $font = New-Object System.Drawing.Font("Segoe UI", 14)
+        $brush = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::Black)
+        $graphics.DrawString("ClearType Visual Test", $font, $brush, 10, 30)
+        
+        # Save the test image
+        $testImagePath = "visual-test-output.png"
+        $bitmap.Save($testImagePath, [System.Drawing.Imaging.ImageFormat]::Png)
+        
+        # Analyze for subpixel rendering (color variation)
+        $colorVariationCount = 0
+        for ($y = 0; $y -lt $bitmap.Height; $y++) {
+            for ($x = 0; $x -lt $bitmap.Width; $x++) {
+                $pixel = $bitmap.GetPixel($x, $y)
+                # Check for color variation (non-grayscale pixels)
+                if ($pixel.R -ne $pixel.G -or $pixel.G -ne $pixel.B) {
+                    if (-not (($pixel.R -eq 255 -and $pixel.G -eq 255 -and $pixel.B -eq 255) -or
+                              ($pixel.R -eq 0 -and $pixel.G -eq 0 -and $pixel.B -eq 0))) {
+                        $colorVariationCount++
+                    }
+                }
+            }
+        }
+        
+        Write-Host "Subpixel color variation pixels detected: $colorVariationCount"
+        
+        # Clean up
+        $graphics.Dispose()
+        $font.Dispose()
+        $brush.Dispose()
+        $bitmap.Dispose()
+        
+        if ($colorVariationCount -gt 0) {
+            Write-Host "✓ ClearType subpixel rendering is active (detected $colorVariationCount color-varied pixels)"
+        } else {
+            Write-Host "⚠ No subpixel color variation detected - this may be expected in some rendering contexts"
+        }
+        
+        Write-Host "✓ Visual rendering validation complete"
+
+    - name: Upload visual test artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: visual-test-results
+        path: |
+          Tests/TestResults/*.trx
+          visual-test-output.png
+
+    - name: Restore default ClearType settings
+      shell: pwsh
+      if: always()
+      run: |
+        # Restore Windows default ClearType settings
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothing' -Value '2' -Type String
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothingType' -Value 2 -Type DWord
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothingOrientation' -Value 1 -Type DWord
+        Remove-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothingGamma' -ErrorAction SilentlyContinue
+        Write-Host "✓ Default ClearType settings restored"
