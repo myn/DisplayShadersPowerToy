@@ -323,7 +323,7 @@ A: No. It only modifies application settings in the registry (under SOFTWARE\Dis
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome! Please see the [Development Guide](docs/DEVELOPER.md) for guidelines.
 
 ### Development Setup
 1. Fork the repository
@@ -344,8 +344,9 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 ## Documentation
 
-- [Quick Start Guide](QUICKSTART.md)
+- [Quick Start Guide](docs/QUICKSTART.md)
 - [Build Instructions](docs/BUILD_INSTRUCTIONS.md)
+- [Developer Guide](docs/DEVELOPER.md)
 - [Implementation Status](docs/IMPLEMENTATION_STATUS.md)
 - [Technical Limitations](docs/TECHNICAL_LIMITATIONS.md)
 
@@ -357,4 +358,4 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 ---
 
-**Made for OLED displays** | Version 1.0.0 | [Report Issues](https://github.com/myn/DisplayShadersPowerToy/issues)
+**Made for OLED displays** | Version 2.0.0 | [Report Issues](https://github.com/myn/DisplayShadersPowerToy/issues)

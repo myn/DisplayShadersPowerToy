@@ -27,6 +27,10 @@ public class DisplayShaderService : IDisposable
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
 
+    [DllImport("user32.dll", SetLastError = true, EntryPoint = "SystemParametersInfoW")]
+    private static extern bool SystemParametersInfoGet(uint uiAction, uint uiParam, ref IntPtr pvParam, uint fWinIni);
+
+    private const uint SPI_GETFONTSMOOTHING = 0x004A;
     private const uint SPI_SETFONTSMOOTHING = 0x004B;
     private const uint SPI_SETFONTSMOOTHINGTYPE = 0x200B;
     private const uint SPI_SETFONTSMOOTHINGORIENTATION = 0x2013;
@@ -382,11 +386,18 @@ public class DisplayShaderService : IDisposable
     }
 
     /// <summary>
-    /// Notify system to refresh display settings
+    /// Notify system to refresh display settings without changing the current font smoothing state.
+    /// Uses SPI_GETFONTSMOOTHING to query then re-set the current value with SPIF_SENDCHANGE.
     /// </summary>
     private void NotifySystemOfChanges()
     {
-        SystemParametersInfo(SPI_SETFONTSMOOTHING, 0, IntPtr.Zero, SPIF_SENDCHANGE);
+        // Query current font smoothing state
+        IntPtr currentState = IntPtr.Zero;
+        SystemParametersInfoGet(SPI_GETFONTSMOOTHING, 0, ref currentState, 0);
+        
+        // Re-apply current state with SENDCHANGE flag to notify other applications
+        uint enabled = currentState != IntPtr.Zero ? 1u : 0u;
+        SystemParametersInfo(SPI_SETFONTSMOOTHING, enabled, IntPtr.Zero, SPIF_SENDCHANGE);
     }
 
     /// <summary>

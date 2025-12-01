@@ -211,7 +211,8 @@ public class SettingsService
     {
         try
         {
-            Registry.CurrentUser.DeleteSubKey(SettingsRegistryPath, false);
+            // Use DeleteSubKeyTree to delete the key and all subkeys
+            Registry.CurrentUser.DeleteSubKeyTree(SettingsRegistryPath, false);
         }
         catch (Exception ex)
         {

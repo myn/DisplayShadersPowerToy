@@ -478,6 +478,58 @@
                                  Content="Minimize to system tray"
                                  Checked="MinimizeToTray_Changed"
                                  Unchecked="MinimizeToTray_Changed"/>
+
+                        <Separator Margin="0,16,0,16"/>
+
+                        <!-- Reset to Defaults -->
+                        <Border Background="#FFF3E0" CornerRadius="6" Padding="16">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="Reset to Windows Defaults" 
+                                              FontSize="13" 
+                                              FontWeight="SemiBold"
+                                              Foreground="#E65100"/>
+                                    <TextBlock Text="Restores standard Windows ClearType settings, disables all optimizations, and clears app settings. Use this to return to the state before running this application." 
+                                              FontSize="11"
+                                              Foreground="#BF360C"
+                                              Margin="0,4,0,0"
+                                              TextWrapping="Wrap"
+                                              MaxWidth="500"/>
+                                </StackPanel>
+                                
+                                <Button Grid.Column="1"
+                                       Content="Reset All"
+                                       Click="ResetToDefaults_Click"
+                                       Height="36"
+                                       Padding="20,0"
+                                       Margin="16,0,0,0"
+                                       Background="#FF5722"
+                                       Foreground="White"
+                                       FontWeight="SemiBold"
+                                       Cursor="Hand"
+                                       VerticalAlignment="Center">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                   CornerRadius="6"
+                                                   Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#E64A19"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Border>
 

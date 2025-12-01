@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private DisplaySettings _currentSettings;
     private DispatcherTimer? _statusUpdateTimer;
     private bool _isInitializing = true;
+    private bool _isUpdatingToggles = false; // Flag to prevent cascading toggle updates
     private TaskbarIcon? _notifyIcon;
 
     public ObservableCollection<MonitorViewModel> Monitors { get; set; } = new ObservableCollection<MonitorViewModel>();
@@ -68,13 +69,28 @@ public partial class MainWindow : Window
         // Initialize Monitors
         RefreshMonitors();
 
-        // Set toggles
-        toggleQuickEnable.IsChecked = _currentSettings.EnableShaderInjection;
-        toggleAutoInject.IsChecked = _currentSettings.EnableShaderInjection;
-        toggleClearType.IsChecked = _currentSettings.EnableClearType;
-        UpdateToggleStatusDisplay();
-        cbStartWithWindows.IsChecked = _currentSettings.StartWithWindows;
-        cbMinimizeToTray.IsChecked = _currentSettings.MinimizeToTray;
+        // Set toggles (wrap in _isUpdatingToggles to prevent cascading)
+        _isUpdatingToggles = true;
+        try
+        {
+            toggleQuickEnable.IsChecked = _currentSettings.EnableShaderInjection;
+            toggleAutoInject.IsChecked = _currentSettings.EnableShaderInjection;
+            toggleClearType.IsChecked = _currentSettings.EnableClearType;
+            UpdateToggleStatusDisplay();
+            
+            // Sync StartWithWindows with actual registry state (in case it was changed externally)
+            bool actualStartWithWindows = _settingsService.IsStartWithWindowsEnabled();
+            if (_currentSettings.StartWithWindows != actualStartWithWindows)
+            {
+                _currentSettings.StartWithWindows = actualStartWithWindows;
+            }
+            cbStartWithWindows.IsChecked = _currentSettings.StartWithWindows;
+            cbMinimizeToTray.IsChecked = _currentSettings.MinimizeToTray;
+        }
+        finally
+        {
+            _isUpdatingToggles = false;
+        }
 
         // Set log path
         txtLogPath.Text = Helpers.DiagnosticLogger.GetLogFilePath();
@@ -163,7 +179,13 @@ public partial class MainWindow : Window
 
         _isInitializing = true; // Prevent triggering change events
 
-        // Set display type
+        // Set display type - first uncheck all to ensure clean state
+        rbDisplayRgbLcd.IsChecked = false;
+        rbDisplayWoled.IsChecked = false;
+        rbDisplayQdOled.IsChecked = false;
+        rbDisplayPentile.IsChecked = false;
+        
+        // Then set the correct one
         switch (settings.ShaderLayout)
         {
             case SubpixelLayout.RgbStripe:
@@ -177,6 +199,10 @@ public partial class MainWindow : Window
                 break;
             case SubpixelLayout.Pentile:
                 rbDisplayPentile.IsChecked = true;
+                break;
+            case SubpixelLayout.None:
+                // None layout - don't check any radio button, or default to RgbStripe
+                rbDisplayRgbLcd.IsChecked = true;
                 break;
         }
 
@@ -297,8 +323,42 @@ public partial class MainWindow : Window
         // Save settings
         _settingsService.SaveSettings(_currentSettings);
         
+        // Verify UI reflects applied state
+        VerifyUIState();
+        
         // Update status
         UpdateQuickStatus();
+    }
+
+    /// <summary>
+    /// Verifies that UI controls reflect the current settings state.
+    /// Call this after applying settings to ensure UI is synchronized.
+    /// </summary>
+    private void VerifyUIState()
+    {
+        _isUpdatingToggles = true;
+        try
+        {
+            // Ensure toggle states match settings
+            if (toggleQuickEnable.IsChecked != _currentSettings.EnableShaderInjection)
+            {
+                toggleQuickEnable.IsChecked = _currentSettings.EnableShaderInjection;
+            }
+            if (toggleAutoInject.IsChecked != _currentSettings.EnableShaderInjection)
+            {
+                toggleAutoInject.IsChecked = _currentSettings.EnableShaderInjection;
+            }
+            if (toggleClearType.IsChecked != _currentSettings.EnableClearType)
+            {
+                toggleClearType.IsChecked = _currentSettings.EnableClearType;
+            }
+            
+            UpdateToggleStatusDisplay();
+        }
+        finally
+        {
+            _isUpdatingToggles = false;
+        }
     }
 
     /// <summary>
@@ -384,14 +444,22 @@ public partial class MainWindow : Window
     // Event Handlers
     private void QuickEnable_Changed(object sender, RoutedEventArgs e)
     {
-        if (_isInitializing) return;
+        if (_isInitializing || _isUpdatingToggles) return;
 
-        _currentSettings.EnableShaderInjection = toggleQuickEnable.IsChecked == true;
-        toggleAutoInject.IsChecked = _currentSettings.EnableShaderInjection;
-        UpdateToggleStatusDisplay();
-        
-        Helpers.DiagnosticLogger.Log("UI", $"Quick enable toggled: {_currentSettings.EnableShaderInjection}");
-        ApplySettings();
+        _isUpdatingToggles = true;
+        try
+        {
+            _currentSettings.EnableShaderInjection = toggleQuickEnable.IsChecked == true;
+            toggleAutoInject.IsChecked = _currentSettings.EnableShaderInjection;
+            UpdateToggleStatusDisplay();
+            
+            Helpers.DiagnosticLogger.Log("UI", $"Quick enable toggled: {_currentSettings.EnableShaderInjection}");
+            ApplySettings();
+        }
+        finally
+        {
+            _isUpdatingToggles = false;
+        }
     }
 
     private void DisplayType_Changed(object sender, RoutedEventArgs e)
@@ -455,14 +523,22 @@ public partial class MainWindow : Window
 
     private void AutoInject_Changed(object sender, RoutedEventArgs e)
     {
-        if (_isInitializing) return;
+        if (_isInitializing || _isUpdatingToggles) return;
 
-        _currentSettings.EnableShaderInjection = toggleAutoInject.IsChecked == true;
-        toggleQuickEnable.IsChecked = _currentSettings.EnableShaderInjection;
-        UpdateToggleStatusDisplay();
-        
-        Helpers.DiagnosticLogger.Log("UI", $"Auto-inject toggled: {_currentSettings.EnableShaderInjection}");
-        ApplySettings();
+        _isUpdatingToggles = true;
+        try
+        {
+            _currentSettings.EnableShaderInjection = toggleAutoInject.IsChecked == true;
+            toggleQuickEnable.IsChecked = _currentSettings.EnableShaderInjection;
+            UpdateToggleStatusDisplay();
+            
+            Helpers.DiagnosticLogger.Log("UI", $"Auto-inject toggled: {_currentSettings.EnableShaderInjection}");
+            ApplySettings();
+        }
+        finally
+        {
+            _isUpdatingToggles = false;
+        }
     }
 
     private void ClearType_Changed(object sender, RoutedEventArgs e)
@@ -483,8 +559,7 @@ public partial class MainWindow : Window
 
         _currentSettings.StartWithWindows = cbStartWithWindows.IsChecked == true;
         _settingsService.SaveSettings(_currentSettings);
-        
-        // TODO: Implement startup registry entry
+        _settingsService.SetStartWithWindows(_currentSettings.StartWithWindows);
     }
 
     private void MinimizeToTray_Changed(object sender, RoutedEventArgs e)
@@ -493,6 +568,101 @@ public partial class MainWindow : Window
 
         _currentSettings.MinimizeToTray = cbMinimizeToTray.IsChecked == true;
         _settingsService.SaveSettings(_currentSettings);
+    }
+
+    /// <summary>
+    /// Resets all settings to Windows defaults - returns the system to the state 
+    /// before running this application.
+    /// </summary>
+    private void ResetToDefaults_Click(object sender, RoutedEventArgs e)
+    {
+        var result = System.Windows.MessageBox.Show(
+            "Reset to Windows Defaults?\n\n" +
+            "This will:\n" +
+            "• Restore standard Windows ClearType settings\n" +
+            "• Disable shader injection for all processes\n" +
+            "• Remove startup entry from Windows\n" +
+            "• Clear all saved application settings\n\n" +
+            "Your system will return to the state it was in before running this application.\n\n" +
+            "Do you want to continue?",
+            "Reset to Windows Defaults",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                Helpers.DiagnosticLogger.Log("MainWindow", "User initiated reset to Windows defaults");
+
+                // Stop shader injection monitoring
+                _currentSettings.EnableShaderInjection = false;
+                _currentSettings.EnableClearType = false;
+                
+                // Apply disabled settings first to stop any active processes
+                _displayShaderService.ApplyShaderSettings(_currentSettings);
+
+                // Restore Windows default ClearType settings
+                _displayShaderService.RestoreWindowsDefaults();
+                Helpers.DiagnosticLogger.Log("MainWindow", "Windows ClearType defaults restored");
+
+                // Remove startup entry
+                _settingsService.SetStartWithWindows(false);
+                Helpers.DiagnosticLogger.Log("MainWindow", "Startup entry removed");
+
+                // Clear all saved settings
+                _settingsService.ClearSettings();
+                Helpers.DiagnosticLogger.Log("MainWindow", "Application settings cleared");
+
+                // Reset current settings to defaults
+                _currentSettings = new DisplaySettings();
+
+                // Update UI to reflect defaults
+                _isInitializing = true;
+                _isUpdatingToggles = true;
+                try
+                {
+                    toggleQuickEnable.IsChecked = false;
+                    toggleAutoInject.IsChecked = false;
+                    toggleClearType.IsChecked = false;
+                    cbStartWithWindows.IsChecked = false;
+                    cbMinimizeToTray.IsChecked = false;
+                    rbDisplayRgbLcd.IsChecked = true;
+                    sliderIntensity.Value = 1.0;
+                    UpdateToggleStatusDisplay();
+                    UpdateIntensityDisplay();
+                }
+                finally
+                {
+                    _isUpdatingToggles = false;
+                    _isInitializing = false;
+                }
+
+                // Update status
+                UpdateQuickStatus();
+
+                System.Windows.MessageBox.Show(
+                    "Settings have been reset to Windows defaults.\n\n" +
+                    "ClearType has been restored to standard Windows settings.\n" +
+                    "All optimizations have been disabled.\n\n" +
+                    "You can close this application or reconfigure it as needed.",
+                    "Reset Complete",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                Helpers.DiagnosticLogger.Log("MainWindow", "Reset to Windows defaults completed successfully");
+            }
+            catch (Exception ex)
+            {
+                Helpers.DiagnosticLogger.LogError("MainWindow", "Reset to defaults failed", ex);
+                System.Windows.MessageBox.Show(
+                    $"Failed to reset settings:\n\n{ex.Message}",
+                    "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
     }
 
     private void ViewLog_Click(object sender, RoutedEventArgs e)
