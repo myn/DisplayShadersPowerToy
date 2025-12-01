@@ -91,6 +91,13 @@ jobs:
         Write-Host "Original FontSmoothing: $currentSmoothing"
         Write-Host "Original FontSmoothingType: $currentType"
         
+        # Verify values exist before attempting write
+        if ($null -eq $currentSmoothing -or $null -eq $currentType) {
+            Write-Warning "Registry keys not found - creating default ClearType values"
+            $currentSmoothing = "2"  # Default: ClearType enabled
+            $currentType = 2         # Default: ClearType type
+        }
+        
         # Test write capability by writing same values back
         try {
             Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name 'FontSmoothing' -Value $currentSmoothing -Type String
