@@ -24,10 +24,7 @@ public class DisplaySettingsTests
         Assert.False(settings.MinimizeToTray);
         Assert.NotNull(settings.MonitorSettings);
         Assert.Empty(settings.MonitorSettings);
-        Assert.Contains("java", settings.IgnoredProcessNames);
-        Assert.Contains("javaw", settings.IgnoredProcessNames);
-        Assert.Contains("RuneLite", settings.IgnoredProcessNames);
-        Assert.Contains("JagexLauncher", settings.IgnoredProcessNames);
+        Assert.Empty(settings.IgnoredProcessNames);
     }
 
     [Fact]

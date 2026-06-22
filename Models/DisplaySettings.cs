@@ -25,13 +25,7 @@ public class DisplaySettings
     public bool MinimizeToTray { get; set; } = false;
 
     // Process names to skip during DLL injection. Names are compared without ".exe".
-    public List<string> IgnoredProcessNames { get; set; } = new List<string>
-    {
-        "java",
-        "javaw",
-        "RuneLite",
-        "JagexLauncher"
-    };
+    public List<string> IgnoredProcessNames { get; set; } = new List<string>();
 }
 
 public class MonitorSettings
