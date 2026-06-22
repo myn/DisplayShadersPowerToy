@@ -64,6 +64,13 @@ public partial class MainWindow : Window
         Helpers.DiagnosticLogger.Log("MainWindow", $"Log file: {Helpers.DiagnosticLogger.GetLogFilePath()}");
     }
 
+    public void StartMinimized()
+    {
+        WindowState = WindowState.Minimized;
+        Hide();
+        Helpers.DiagnosticLogger.Log("MainWindow", "Started minimized to tray");
+    }
+
     private void InitializeUI()
     {
         // Initialize Monitors
