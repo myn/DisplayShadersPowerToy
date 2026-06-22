@@ -1,4 +1,5 @@
-﻿using System.Windows;
+using System.Threading;
+using System.Windows;
 
 namespace DisplayShadersPowerToy;
 
@@ -7,27 +8,38 @@ namespace DisplayShadersPowerToy;
 /// </summary>
 public partial class App : System.Windows.Application
 {
+    private const string SingleInstanceMutexName = @"Local\DisplayShadersPowerToy.SingleInstance";
+    private Mutex? _singleInstanceMutex;
+
     protected override void OnStartup(StartupEventArgs e)
     {
+        var singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out bool createdNew);
+        if (!createdNew)
+        {
+            singleInstanceMutex.Dispose();
+            Shutdown();
+            return;
+        }
+
+        _singleInstanceMutex = singleInstanceMutex;
+
         base.OnStartup(e);
 
-        // Check if started minimized
-        bool startMinimized = e.Args.Length > 0 && e.Args.Contains("--minimized");
+        bool startMinimized = e.Args.Any(arg =>
+            string.Equals(arg, "--minimized", StringComparison.OrdinalIgnoreCase));
 
-        // Apply saved settings on startup
         try
         {
-            var settingsService = new Services.SettingsService();
-            var displayShaderService = new Services.DisplayShaderService();
-            
-            var settings = settingsService.LoadSettings();
-            displayShaderService.ApplyShaderSettings(settings);
+            var mainWindow = new MainWindow();
+            MainWindow = mainWindow;
 
-            // If started minimized, don't show the main window
-            if (startMinimized && MainWindow != null)
+            if (startMinimized)
             {
-                MainWindow.WindowState = WindowState.Minimized;
-                MainWindow.Hide();
+                mainWindow.StartMinimized();
+            }
+            else
+            {
+                mainWindow.Show();
             }
         }
         catch (Exception ex)
@@ -37,7 +49,16 @@ public partial class App : System.Windows.Application
                 "Display Shaders PowerToy",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
+            Shutdown();
         }
     }
-}
 
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _singleInstanceMutex?.ReleaseMutex();
+        _singleInstanceMutex?.Dispose();
+        _singleInstanceMutex = null;
+
+        base.OnExit(e);
+    }
+}

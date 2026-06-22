@@ -19,6 +19,7 @@ public class InjectionManager : IDisposable
     private readonly Dictionary<int, IntPtr> _injectedModules = new(); // Store module handles (for reference only - not used for ejection)
     private readonly HashSet<int> _failedProcesses = new(); // Track processes that failed injection
     private readonly HashSet<string> _systemProcessBlacklist;
+    private readonly HashSet<string> _userProcessBlacklist = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _monitoringCts;
     private Task? _monitoringTask;
     private bool _isMonitoring;
@@ -84,6 +85,29 @@ public class InjectionManager : IDisposable
 
         Debug.WriteLine("[InjectionManager] Initialized - UNIVERSAL MODE");
         Debug.WriteLine($"[InjectionManager] System blacklist: {_systemProcessBlacklist.Count} processes");
+        Helpers.DiagnosticLogger.Log("InjectionManager", $"System blacklist: {_systemProcessBlacklist.Count} processes");
+    }
+
+    public void UpdateIgnoredProcesses(IEnumerable<string>? processNames)
+    {
+        _userProcessBlacklist.Clear();
+
+        if (processNames == null)
+        {
+            return;
+        }
+
+        foreach (var processName in processNames)
+        {
+            var normalized = NormalizeProcessName(processName);
+            if (!string.IsNullOrWhiteSpace(normalized))
+            {
+                _userProcessBlacklist.Add(normalized);
+            }
+        }
+
+        Debug.WriteLine($"[InjectionManager] User ignored processes: {string.Join(", ", _userProcessBlacklist.OrderBy(p => p))}");
+        Helpers.DiagnosticLogger.Log("InjectionManager", $"User ignored processes: {string.Join(", ", _userProcessBlacklist.OrderBy(p => p))}");
     }
 
     /// <summary>
@@ -456,6 +480,13 @@ public class InjectionManager : IDisposable
 
             // Check system blacklist (critical processes only)
             if (_systemProcessBlacklist.Contains(processName))
+            {
+                return false;
+            }
+
+            // Check user blacklist before any injection attempt. This is intended
+            // for apps that do not tolerate DLL injection, such as games/launchers.
+            if (_userProcessBlacklist.Contains(processName))
             {
                 return false;
             }
@@ -1120,6 +1151,17 @@ public class InjectionManager : IDisposable
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool GetExitCodeThread(IntPtr hThread, out uint lpExitCode);
+    }
+
+    private static string NormalizeProcessName(string processName)
+    {
+        var normalized = processName.Trim();
+        if (normalized.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[..^4];
+        }
+
+        return normalized.ToLowerInvariant();
     }
 
     [Flags]
