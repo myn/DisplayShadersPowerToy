@@ -24,6 +24,10 @@ public class DisplaySettingsTests
         Assert.False(settings.MinimizeToTray);
         Assert.NotNull(settings.MonitorSettings);
         Assert.Empty(settings.MonitorSettings);
+        Assert.Contains("java", settings.IgnoredProcessNames);
+        Assert.Contains("javaw", settings.IgnoredProcessNames);
+        Assert.Contains("RuneLite", settings.IgnoredProcessNames);
+        Assert.Contains("JagexLauncher", settings.IgnoredProcessNames);
     }
 
     [Fact]
@@ -41,6 +45,7 @@ public class DisplaySettingsTests
         settings.ClearTypeIntensity = 0.75;
         settings.StartWithWindows = true;
         settings.MinimizeToTray = true;
+        settings.IgnoredProcessNames = new List<string> { "notepad", "Code" };
 
         // Assert
         Assert.False(settings.EnableShaderInjection);
@@ -51,6 +56,7 @@ public class DisplaySettingsTests
         Assert.Equal(0.75, settings.ClearTypeIntensity);
         Assert.True(settings.StartWithWindows);
         Assert.True(settings.MinimizeToTray);
+        Assert.Equal(new[] { "notepad", "Code" }, settings.IgnoredProcessNames);
     }
 
     [Fact]

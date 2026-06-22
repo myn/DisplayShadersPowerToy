@@ -467,6 +467,58 @@
 
                         <Separator Margin="0,12,0,12"/>
 
+                        <!-- Injection Ignore List -->
+                        <StackPanel Margin="0,0,0,12">
+                            <TextBlock Text="Ignored Processes"
+                                      FontSize="13"
+                                      FontWeight="SemiBold"/>
+                            <TextBlock Text="Process names that should never receive DisplayShaderHook.dll. Separate names with commas or new lines."
+                                      FontSize="11"
+                                      Foreground="{StaticResource TextSecondary}"
+                                      Margin="0,2,0,8"
+                                      TextWrapping="Wrap"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox x:Name="txtIgnoredProcesses"
+                                       Grid.Column="0"
+                                       MinHeight="68"
+                                       AcceptsReturn="True"
+                                       TextWrapping="Wrap"
+                                       VerticalScrollBarVisibility="Auto"
+                                       Padding="10,8"/>
+
+                                <Button Grid.Column="2"
+                                      Content="Save"
+                                      Click="IgnoredProcesses_Save_Click"
+                                      Height="36"
+                                      Padding="16,0"
+                                      VerticalAlignment="Top"
+                                      Background="{StaticResource SurfaceHover}"
+                                      BorderBrush="{StaticResource Border}"
+                                      BorderThickness="1"
+                                      Cursor="Hand">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                   BorderBrush="{TemplateBinding BorderBrush}"
+                                                   BorderThickness="{TemplateBinding BorderThickness}"
+                                                   CornerRadius="6"
+                                                   Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </Grid>
+                        </StackPanel>
+
+                        <Separator Margin="0,12,0,12"/>
+
                         <!-- Application Settings -->
                         <CheckBox x:Name="cbStartWithWindows"
                                  Content="Launch automatically at startup"

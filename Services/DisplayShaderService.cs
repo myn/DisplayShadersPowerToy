@@ -163,10 +163,12 @@ public class DisplayShaderService : IDisposable
         // Apply shader injection if enabled and available
         if (settings.EnableShaderInjection && _shaderModeAvailable && _shaderService != null && _injectionManager != null)
         {
+            _injectionManager.UpdateIgnoredProcesses(settings.IgnoredProcessNames);
             ApplyRealShaderSettings(settings);
         }
         else if (_injectionManager != null)
         {
+            _injectionManager.UpdateIgnoredProcesses(settings.IgnoredProcessNames);
             // Update config to disabled state first so any currently hooked apps stop processing
             if (_shaderService != null)
             {

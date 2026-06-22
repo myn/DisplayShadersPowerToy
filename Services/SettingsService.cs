@@ -80,6 +80,7 @@ public class SettingsService
                 // Save application settings
                 key.SetValue("StartWithWindows", settings.StartWithWindows ? 1 : 0);
                 key.SetValue("MinimizeToTray", settings.MinimizeToTray ? 1 : 0);
+                key.SetValue("IgnoredProcessNames", settings.IgnoredProcessNames.ToArray(), RegistryValueKind.MultiString);
 
                 // Save per-monitor settings
                 using var monitorsKey = key.CreateSubKey("Monitors");
@@ -169,6 +170,25 @@ public class SettingsService
                     settings.MinimizeToTray = Convert.ToInt32(minimizeToTray) == 1;
                 }
 
+                var ignoredProcessNames = key.GetValue("IgnoredProcessNames");
+                if (ignoredProcessNames is string[] ignoredArray)
+                {
+                    settings.IgnoredProcessNames = ignoredArray
+                        .Select(NormalizeProcessName)
+                        .Where(name => !string.IsNullOrWhiteSpace(name))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                }
+                else if (ignoredProcessNames is string ignoredString)
+                {
+                    settings.IgnoredProcessNames = ignoredString
+                        .Split(new[] { ',', ';', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(NormalizeProcessName)
+                        .Where(name => !string.IsNullOrWhiteSpace(name))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                }
+
                 // Load per-monitor settings
                 using var monitorsKey = key.OpenSubKey("Monitors");
                 if (monitorsKey != null)
@@ -218,5 +238,16 @@ public class SettingsService
         {
             System.Diagnostics.Debug.WriteLine($"Error clearing settings: {ex.Message}");
         }
+    }
+
+    private static string NormalizeProcessName(string value)
+    {
+        var name = value.Trim();
+        if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            name = name[..^4];
+        }
+
+        return name;
     }
 }

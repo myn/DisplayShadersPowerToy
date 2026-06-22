@@ -23,6 +23,15 @@ public class DisplaySettings
     // Application Settings
     public bool StartWithWindows { get; set; } = false;
     public bool MinimizeToTray { get; set; } = false;
+
+    // Process names to skip during DLL injection. Names are compared without ".exe".
+    public List<string> IgnoredProcessNames { get; set; } = new List<string>
+    {
+        "java",
+        "javaw",
+        "RuneLite",
+        "JagexLauncher"
+    };
 }
 
 public class MonitorSettings

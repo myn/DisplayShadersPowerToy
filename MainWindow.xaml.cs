@@ -86,6 +86,7 @@ public partial class MainWindow : Window
             }
             cbStartWithWindows.IsChecked = _currentSettings.StartWithWindows;
             cbMinimizeToTray.IsChecked = _currentSettings.MinimizeToTray;
+            txtIgnoredProcesses.Text = string.Join(Environment.NewLine, _currentSettings.IgnoredProcessNames);
         }
         finally
         {
@@ -568,6 +569,44 @@ public partial class MainWindow : Window
 
         _currentSettings.MinimizeToTray = cbMinimizeToTray.IsChecked == true;
         _settingsService.SaveSettings(_currentSettings);
+    }
+
+    private void IgnoredProcesses_Save_Click(object sender, RoutedEventArgs e)
+    {
+        _currentSettings.IgnoredProcessNames = ParseIgnoredProcessNames(txtIgnoredProcesses.Text);
+        txtIgnoredProcesses.Text = string.Join(Environment.NewLine, _currentSettings.IgnoredProcessNames);
+
+        Helpers.DiagnosticLogger.Log("UI", $"Ignored process list saved: {string.Join(", ", _currentSettings.IgnoredProcessNames)}");
+        ApplySettings();
+
+        System.Windows.MessageBox.Show(
+            "Ignored process list saved.\n\n" +
+            "New matching processes will be skipped before DLL injection. Restart any already-running ignored applications to make sure an existing hook is gone.",
+            "Ignored Processes Saved",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private static List<string> ParseIgnoredProcessNames(string text)
+    {
+        return text
+            .Split(new[] { ',', ';', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(NormalizeProcessName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string NormalizeProcessName(string processName)
+    {
+        var normalized = processName.Trim();
+        if (normalized.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[..^4];
+        }
+
+        return normalized;
     }
 
     /// <summary>
